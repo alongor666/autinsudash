@@ -20,6 +20,14 @@ export type FilterOptions = {
   coverageTypes: string[];
 };
 
+export type BusinessTypeAlias = {
+    name: string;
+    description: string;
+    // A function that takes the set of selected business types and all available business types,
+    // and returns true if the selection matches the alias rule.
+    matchFunction: (selectedTypes: Set<string>, allTypes: string[]) => boolean;
+}
+
 export type Filters = {
   year: string | null;
   region: string | null;

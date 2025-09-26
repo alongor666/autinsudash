@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useData } from '@/contexts/data-context';
 import { Filters, RawDataRow } from '@/lib/types';
 import { format } from 'date-fns';
+import { businessTypeAliases } from '@/lib/data';
 
 function getLatestSnapshotDate(data: RawDataRow[]): Date | null {
   if (!data || data.length === 0) {
@@ -20,22 +21,39 @@ function getLatestSnapshotDate(data: RawDataRow[]): Date | null {
   return latestDate;
 }
 
+function getBusinessTypeAlias(selectedTypes: string[], allTypes: string[]): string {
+    if (!selectedTypes || selectedTypes.length === 0) {
+        return '';
+    }
 
-function generateSummaryText(filters: Filters): string {
+    const selectedSet = new Set(selectedTypes);
+    
+    for (const alias of businessTypeAliases) {
+        if (alias.matchFunction(selectedSet, allTypes)) {
+            return alias.name;
+        }
+    }
+
+    return selectedTypes.join('、');
+}
+
+
+function generateSummaryText(filters: Filters, allBusinessTypes: string[]): string {
     const orgPart = filters.region || '四川分公司';
     const yearPart = filters.year ? `${filters.year}年` : '';
     const weekPart = filters.weekNumber ? `第${filters.weekNumber}周` : '';
 
     const insuranceTypes = (filters.insuranceTypes || []).join('、');
-    const businessTypes = (filters.businessTypes || []).join('、');
     
-    let description = [yearPart, insuranceTypes, weekPart, businessTypes].filter(Boolean).join('');
+    const businessTypePart = getBusinessTypeAlias(filters.businessTypes || [], allBusinessTypes);
+
+    let description = [yearPart, insuranceTypes, weekPart, businessTypePart].filter(Boolean).join('');
     
     if (!description && filters.year) {
         description = `${filters.year}年`;
     }
 
-    if (insuranceTypes && !businessTypes) {
+    if (insuranceTypes && !businessTypePart) {
         description += '车险';
     }
     
@@ -67,13 +85,13 @@ export function FilterSummary() {
 }
 
 export function FilterSummaryTitle() {
-  const { filters } = useData();
+  const { filters, filterOptions } = useData();
   const [summary, setSummary] = useState("数据概况");
   
   useEffect(() => {
-    const newSummary = generateSummaryText(filters);
+    const newSummary = generateSummaryText(filters, filterOptions.businessTypes);
     setSummary(newSummary);
-  }, [filters]);
+  }, [filters, filterOptions.businessTypes]);
 
   return (
       <h2 className="text-2xl font-semibold text-center flex-grow">{summary}</h2>

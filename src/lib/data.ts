@@ -1,4 +1,6 @@
-import type { Kpi, FilterOptions, KPIKey } from './types';
+import type { Kpi, FilterOptions, KPIKey, BusinessTypeAlias } from './types';
+import { isEqual, difference } from 'lodash-es';
+
 
 export const kpiData: { [key in KPIKey]: Omit<Kpi, 'title' | 'id'> } = {
   signedPremium: {
@@ -39,12 +41,60 @@ export const filterOptions: FilterOptions = {
   years: ['2024', '2023', '2022'],
   regions: ['成都', '绵阳', '德阳', '南充', '宜宾'],
   insuranceTypes: ['交强险', '商业险'],
-  businessTypes: ['新车', '转保', '续保'],
+  businessTypes: ['新车', '转保', '续保', '9吨及以上货车', '2吨及以下货车', '营业货车', '非营业客车', '非营业个人', '摩托车'],
   newEnergyStatus: ['是', '否'],
   weekNumbers: [],
   transferredStatus: [],
   coverageTypes: [],
 };
+
+export const businessTypeAliases: BusinessTypeAlias[] = [
+    {
+        name: '货车',
+        description: '包含所有货车相关类型',
+        matchFunction: (selected, all) => {
+            const allTrucks = all.filter(t => t.includes('货车'));
+            return allTrucks.length > 0 && allTrucks.every(t => selected.has(t));
+        }
+    },
+    {
+        name: '大货车',
+        description: '仅选择“9吨及以上货车”',
+        matchFunction: (selected) => selected.size === 1 && selected.has('9吨及以上货车')
+    },
+    {
+        name: '小货车',
+        description: '仅选择“2吨及以下货车”',
+        matchFunction: (selected) => selected.size === 1 && selected.has('2吨及以下货车')
+    },
+    {
+        name: '营业货车',
+        description: '包含所有“营业”属性的货车类型',
+        matchFunction: (selected, all) => {
+             const allCommercialTrucks = all.filter(t => t.includes('营业') && t.includes('货车'));
+             return allCommercialTrucks.length > 0 && allCommercialTrucks.every(t => selected.has(t));
+        }
+    },
+    {
+        name: '非营业客车',
+        description: '仅选择“非营业客车”',
+        matchFunction: (selected) => selected.size === 1 && selected.has('非营业客车')
+    },
+    {
+        name: '家自车',
+        description: '仅选择“非营业个人”',
+        matchFunction: (selected) => selected.size === 1 && selected.has('非营业个人')
+    },
+    {
+        name: '不含摩托车',
+        description: '选择了除“摩托车”以外的所有业务类型',
+        matchFunction: (selected, all) => {
+            const allExceptMotorcycle = new Set(all);
+            allExceptMotorcycle.delete('摩托车');
+            return selected.size === allExceptMotorcycle.size && [...selected].every(item => allExceptMotorcycle.has(item))
+        }
+    }
+];
 
 export const chartData = [
   { week_number: 1, signed_premium_yuan: 200000, reported_claim_payment_yuan: 120000 },
@@ -61,3 +111,4 @@ export const kpiListForAI = (Object.values(kpiMeta) as { title: string }[]).map(
 export const availableFiltersForAI = Object.values(filterOptions).flat();
 
 export const historicalUserBehaviorForAI = "用户经常在查看'成都'地区的'商业险'后，关注'赔付率'和'承保利润率'。";
+
