@@ -1,6 +1,4 @@
 import type { Kpi, FilterOptions, KPIKey, BusinessTypeAlias } from './types';
-import { isEqual, difference } from 'lodash-es';
-
 
 export const kpiData: { [key in KPIKey]: Omit<Kpi, 'title' | 'id'> } = {
   signedPremium: {
@@ -54,7 +52,8 @@ export const businessTypeAliases: BusinessTypeAlias[] = [
         description: '包含所有货车相关类型',
         matchFunction: (selected, all) => {
             const allTrucks = all.filter(t => t.includes('货车'));
-            return allTrucks.length > 0 && allTrucks.every(t => selected.has(t));
+            const selectedTrucks = Array.from(selected).filter(t => t.includes('货车'));
+            return allTrucks.length > 0 && selectedTrucks.length === allTrucks.length && selected.size === allTrucks.length;
         }
     },
     {
@@ -72,7 +71,8 @@ export const businessTypeAliases: BusinessTypeAlias[] = [
         description: '包含所有“营业”属性的货车类型',
         matchFunction: (selected, all) => {
              const allCommercialTrucks = all.filter(t => t.includes('营业') && t.includes('货车'));
-             return allCommercialTrucks.length > 0 && allCommercialTrucks.every(t => selected.has(t));
+             const selectedCommercialTrucks = Array.from(selected).filter(t => t.includes('营业') && t.includes('货车'));
+             return allCommercialTrucks.length > 0 && selectedCommercialTrucks.length === allCommercialTrucks.length && selected.size === allCommercialTrucks.length;
         }
     },
     {
@@ -89,9 +89,9 @@ export const businessTypeAliases: BusinessTypeAlias[] = [
         name: '不含摩托车',
         description: '选择了除“摩托车”以外的所有业务类型',
         matchFunction: (selected, all) => {
-            const allExceptMotorcycle = new Set(all);
-            allExceptMotorcycle.delete('摩托车');
-            return selected.size === allExceptMotorcycle.size && [...selected].every(item => allExceptMotorcycle.has(item))
+            const hasMotorcycle = selected.has('摩托车');
+            const allWithoutMotorcycle = all.filter(t => t !== '摩托车');
+            return !hasMotorcycle && selected.size === allWithoutMotorcycle.length;
         }
     }
 ];
@@ -111,4 +111,3 @@ export const kpiListForAI = (Object.values(kpiMeta) as { title: string }[]).map(
 export const availableFiltersForAI = Object.values(filterOptions).flat();
 
 export const historicalUserBehaviorForAI = "用户经常在查看'成都'地区的'商业险'后，关注'赔付率'和'承保利润率'。";
-

@@ -17,7 +17,8 @@ const PredictiveFilterSuggestionsInputSchema = z.object({
   searchInput: z.string().describe('The user input string in the filter.'),
   availableFilters: z.array(z.string()).describe('A flat list of all available filter options across all dimensions.'),
   kpiList: z.array(z.string()).describe('The list of available KPIs.'),
-  historicalUserBehavior: z.string().describe('Summary of historical user behavior related to filter selections and KPI views.')
+  historicalUserBehavior: z.string().describe('Summary of historical user behavior related to filter selections and KPI views.'),
+  aliases: z.array(z.object({ name: z.string(), description: z.string()})).describe('A list of business aliases that represent a combination of business type filters.')
 });
 export type PredictiveFilterSuggestionsInput = z.infer<typeof PredictiveFilterSuggestionsInputSchema>;
 
@@ -25,8 +26,8 @@ const PredictiveFilterSuggestionsOutputSchema = z.object({
   suggestedFilters: z
     .array(
       z.object({
-        dimension: z.string().describe("The dimension of the filter (e.g., '三级机构', '业务类型')."),
-        value: z.string().describe("The specific value for the filter dimension (e.g., '成都', '新车')."),
+        dimension: z.string().describe("The dimension of the filter (e.g., 'region', 'business_type_category')."),
+        value: z.string().describe("The specific value for the filter dimension (e.g., '成都', '新车', or a business alias like '货车')."),
       })
     )
     .describe('Suggested filter dimension/value pairs based on the search input and historical user behavior.'),
@@ -46,9 +47,14 @@ const predictiveFilterSuggestionsPrompt = ai.definePrompt({
   name: 'predictiveFilterSuggestionsPrompt',
   input: {schema: PredictiveFilterSuggestionsInputSchema},
   output: {schema: PredictiveFilterSuggestionsOutputSchema},
-  prompt: `You are an AI assistant for a car insurance dashboard. Your task is to provide concrete filter suggestions and highlight relevant KPIs based on the user's search query and historical behavior.
+  prompt: `You are an AI assistant for a car insurance dashboard. Your task is to provide concrete filter suggestions and highlight relevant KPIs based on the user's search query.
 
 User's search input: "{{searchInput}}"
+
+Here is a list of business aliases that represent complex filter combinations. Prioritize matching these if the user input is similar.
+{{#each aliases}}
+- {{this.name}}: {{this.description}}
+{{/each}}
 
 Here is a flat list of all available filter options:
 {{#each availableFilters}}
@@ -60,19 +66,19 @@ Available KPIs:
 - {{this}}
 {{/each}}
 
-Historical user behavior summary: {{historicalUserBehavior}}
+Your goal is to understand the user's intent and map it to a specific filter or a business alias.
 
-Based on the user's input, search through the available filter options and suggest the most relevant filter values. For each suggestion, you MUST identify its corresponding dimension. The dimension MUST be one of the following: 'policy_start_year', 'week_number', 'third_level_organization', 'business_type_category', 'insurance_type', 'coverage_type', 'is_new_energy_vehicle', 'is_transferred_vehicle'.
+1.  **Check for Alias Match First**: If the user's input (e.g., "货车", "家自车") matches one of the business aliases, you MUST return a suggestion with the dimension 'business_type_category' and the value being the alias name. For example, for "货车", return \`{ dimension: 'business_type_category', value: '货车' }\`.
 
-For example, if the user types "成都", and "成都" is in the list of options, you should identify that "成都" belongs to the 'third_level_organization' dimension and return { dimension: 'third_level_organization', value: '成都' }.
-If the user types "新", you might suggest { dimension: 'business_type_category', value: '新车' } and { dimension: 'is_new_energy_vehicle', value: '是' }.
-If the user types "2023", you should suggest { dimension: 'policy_start_year', value: '2023' }.
+2.  **If No Alias, Check for Direct Filter Match**: If the input does not match an alias, search through the 'availableFilters' list. For each match, you MUST identify its corresponding dimension. The dimension MUST be one of the following: 'year', 'weekNumber', 'region', 'business_type_category', 'insurance_type', 'coverage_type', 'is_new_energy_vehicle', 'is_transferred_vehicle'.
 
+    *   For "成都", return \`{ dimension: 'region', value: '成都' }\`.
+    *   For "新车", return \`{ dimension: 'business_type_category', value: '新车' }\`.
+    *   For "2023", return \`{ dimension: 'year', value: '2023' }\`.
 
-Also, identify which KPIs are likely to be most affected or important to watch based on the suggested filters.
+3.  **Highlight KPIs**: Identify which KPIs are likely to be most affected or important to watch based on the suggested filters.
 
-Only return suggestions from the provided lists of available filters and KPIs. Return up to 3 relevant filter suggestions.
-Your response must be in JSON format.
+Only return suggestions from the provided lists. Return up to 3 relevant filter suggestions. Your response must be in JSON format.
 `,
 });
 

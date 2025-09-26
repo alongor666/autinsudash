@@ -40,7 +40,7 @@ export type Filters = {
 }
 
 export type SuggestedFilter = {
-    dimension: 'policy_start_year' | 'week_number' | 'third_level_organization' | 'business_type_category' | 'insurance_type' | 'coverage_type' | 'is_new_energy_vehicle' | 'is_transferred_vehicle';
+    dimension: keyof Omit<Filters, 'businessTypes' | 'insuranceTypes' | 'newEnergyStatus' | 'transferredStatus' | 'coverageTypes'> | 'business_type_category' | 'insurance_type' | 'is_new_energy_vehicle' | 'is_transferred_vehicle' | 'coverage_type';
     value: string;
 }
 

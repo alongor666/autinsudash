@@ -22,7 +22,7 @@ function getLatestSnapshotDate(data: RawDataRow[]): Date | null {
 }
 
 function getBusinessTypeAlias(selectedTypes: string[], allTypes: string[]): string {
-    if (!selectedTypes || selectedTypes.length === 0) {
+    if (!selectedTypes || selectedTypes.length === 0 || selectedTypes.length === allTypes.length) {
         return '';
     }
 
@@ -32,6 +32,10 @@ function getBusinessTypeAlias(selectedTypes: string[], allTypes: string[]): stri
         if (alias.matchFunction(selectedSet, allTypes)) {
             return alias.name;
         }
+    }
+
+    if (selectedTypes.length > 2) {
+      return `多种业务(${selectedTypes.length})`;
     }
 
     return selectedTypes.join('、');
@@ -47,7 +51,11 @@ function generateSummaryText(filters: Filters, allBusinessTypes: string[]): stri
     
     const businessTypePart = getBusinessTypeAlias(filters.businessTypes || [], allBusinessTypes);
 
-    let description = [yearPart, insuranceTypes, weekPart, businessTypePart].filter(Boolean).join('');
+    let description = [yearPart, weekPart, businessTypePart].filter(Boolean).join(' ');
+    
+    if (insuranceTypes) {
+      description = `${yearPart} ${weekPart} ${insuranceTypes}${businessTypePart ? `(${businessTypePart})` : ''}`.trim();
+    }
     
     if (!description && filters.year) {
         description = `${filters.year}年`;
@@ -61,7 +69,7 @@ function generateSummaryText(filters: Filters, allBusinessTypes: string[]): stri
         description = '整体';
     }
 
-    return `${orgPart}${description}经营概况`;
+    return `${orgPart} ${description}经营概况`;
 }
 
 export function FilterSummary() {

@@ -29,7 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Separator } from '../ui/separator';
 import { Input } from '../ui/input';
 import { getPredictiveSuggestions } from '@/app/actions';
-import { kpiListForAI } from '@/lib/data';
+import { kpiListForAI, businessTypeAliases } from '@/lib/data';
 import { Badge } from '../ui/badge';
 
 export function TopFilters() {
@@ -62,6 +62,7 @@ export function TopFilters() {
         availableFilters: allOptions,
         kpiList: kpiListForAI,
         historicalUserBehavior,
+        aliases: businessTypeAliases.map(a => ({ name: a.name, description: a.description })),
       });
 
       setSuggestedFilters(result.suggestedFilters || []);
@@ -125,33 +126,47 @@ export function TopFilters() {
     let combinedFilters = { ...draftFilters };
 
     aiDraftFilters.forEach(filter => {
-      const { dimension, value } = filter;
-      switch (dimension) {
-        case 'third_level_organization':
-            combinedFilters.region = value;
-            break;
-        case 'policy_start_year':
-            combinedFilters.year = value;
-            break;
-        case 'week_number':
-            combinedFilters.weekNumber = value;
-            break;
-        case 'business_type_category':
-            combinedFilters.businessTypes = [...new Set([...(combinedFilters.businessTypes || []), value])];
-            break;
-        case 'insurance_type':
-            combinedFilters.insuranceTypes = [...new Set([...(combinedFilters.insuranceTypes || []), value])];
-            break;
-        case 'is_new_energy_vehicle':
-            combinedFilters.newEnergyStatus = [...new Set([...(combinedFilters.newEnergyStatus || []), value])];
-            break;
-        case 'is_transferred_vehicle':
-            combinedFilters.transferredStatus = [...new Set([...(combinedFilters.transferredStatus || []), value])];
-            break;
-        case 'coverage_type':
-            combinedFilters.coverageTypes = [...new Set([...(combinedFilters.coverageTypes || []), value])];
-            break;
-      }
+        const { dimension, value } = filter;
+        const alias = businessTypeAliases.find(a => a.name === value);
+
+        if (dimension === 'business_type_category' && alias) {
+             const allTypes = filterOptions.businessTypes;
+             if(alias.name === '不含摩托车') {
+                 combinedFilters.businessTypes = allTypes.filter(t => t !== '摩托车');
+             } else if (alias.name === '货车') {
+                 combinedFilters.businessTypes = allTypes.filter(t => t.includes('货车'));
+             } else if (alias.name === '营业货车') {
+                 combinedFilters.businessTypes = allTypes.filter(t => t.includes('营业') && t.includes('货车'));
+             }
+             // Add other alias handling logic here based on their matchFunctions
+        } else {
+            switch (dimension) {
+                case 'region':
+                    combinedFilters.region = value;
+                    break;
+                case 'year':
+                    combinedFilters.year = value;
+                    break;
+                case 'weekNumber':
+                    combinedFilters.weekNumber = value;
+                    break;
+                case 'business_type_category':
+                    combinedFilters.businessTypes = [...new Set([...(combinedFilters.businessTypes || []), value])];
+                    break;
+                case 'insurance_type':
+                    combinedFilters.insuranceTypes = [...new Set([...(combinedFilters.insuranceTypes || []), value])];
+                    break;
+                case 'is_new_energy_vehicle':
+                    combinedFilters.newEnergyStatus = [...new Set([...(combinedFilters.newEnergyStatus || []), value])];
+                    break;
+                case 'is_transferred_vehicle':
+                    combinedFilters.transferredStatus = [...new Set([...(combinedFilters.transferredStatus || []), value])];
+                    break;
+                case 'coverage_type':
+                    combinedFilters.coverageTypes = [...new Set([...(combinedFilters.coverageTypes || []), value])];
+                    break;
+            }
+        }
     });
 
     setFilters(combinedFilters);
