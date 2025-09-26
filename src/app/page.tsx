@@ -4,7 +4,7 @@ import { DashboardHeader } from '@/components/dashboard/header';
 import { KpiGrid } from '@/components/dashboard/kpi-grid';
 import { MainChart } from '@/components/dashboard/main-chart';
 import { DataProvider } from '@/contexts/data-context';
-import { TopFilters } from '@/components/dashboard/top-filters';
+import { FilterSummary } from '@/components/dashboard/filter-summary';
 
 export default function DashboardPage() {
 
@@ -13,7 +13,7 @@ export default function DashboardPage() {
       <div className="flex min-h-screen w-full flex-col">
         <DashboardHeader />
         <main className="flex-1 space-y-4 p-4 md:p-6">
-          <TopFilters />
+          <FilterSummary />
           <KpiGrid />
           <div className="grid gap-4 md:grid-cols-1">
             <MainChart />

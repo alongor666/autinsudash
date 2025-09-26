@@ -16,7 +16,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, SlidersHorizontal, Search, X } from 'lucide-react';
+import { SlidersHorizontal, Search, X } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import {
   Accordion,
@@ -79,54 +79,18 @@ export function TopFilters() {
 
   useEffect(() => {
     setDraftFilters(filters);
-  }, [filters]);
+  }, [filters, isPopoverOpen]);
 
-  const handleYearChange = (year: string) => {
-    setFilters({ ...filters, year: year === 'all' ? null : year });
+  const handleSingleSelectChange = (dimension: keyof Filters, value: string) => {
+    setDraftFilters(prev => ({ ...prev, [dimension]: value === 'all' ? null : value }));
   };
 
-  const handleRegionChange = (region: string) => {
-    setFilters({ ...filters, region: region === 'all' ? null : region });
-  };
-
-  const handleWeekNumberChange = (week: string) => {
-    setFilters({ ...filters, weekNumber: week === 'all' ? null : week });
-  };
-
-  const handleBusinessTypeChange = (type: string, checked: boolean) => {
-    const currentTypes = filters.businessTypes || [];
-    const newTypes = checked
-      ? [...currentTypes, type]
-      : currentTypes.filter((t) => t !== type);
-    setFilters({ ...filters, businessTypes: newTypes });
-  };
-  
-  const handleInsuranceTypeChange = (type: string, checked: boolean) => {
-     const newTypes = checked
-      ? [...(draftFilters.insuranceTypes || []), type]
-      : (draftFilters.insuranceTypes || []).filter((t) => t !== type);
-    setDraftFilters({ ...draftFilters, insuranceTypes: newTypes });
-  };
-
- const handleNewEnergyChange = (status: string, checked: boolean) => {
-    const newStatus = checked
-     ? [...(draftFilters.newEnergyStatus || []), status]
-     : (draftFilters.newEnergyStatus || []).filter((s) => s !== status);
-    setDraftFilters({ ...draftFilters, newEnergyStatus: newStatus });
- };
-
-  const handleTransferredStatusChange = (status: string, checked: boolean) => {
-    const newStatus = checked
-      ? [...(draftFilters.transferredStatus || []), status]
-      : (draftFilters.transferredStatus || []).filter(s => s !== status);
-    setDraftFilters({ ...draftFilters, transferredStatus: newStatus });
-  };
-
-  const handleCoverageTypeChange = (type: string, checked: boolean) => {
-    const newTypes = checked
-      ? [...(draftFilters.coverageTypes || []), type]
-      : (draftFilters.coverageTypes || []).filter(t => t !== type);
-    setDraftFilters({ ...draftFilters, coverageTypes: newTypes });
+  const handleMultiSelectChange = (dimension: keyof Filters, value: string, checked: boolean) => {
+    const currentValues = (draftFilters[dimension] as string[] | null) || [];
+    const newValues = checked
+      ? [...currentValues, value]
+      : currentValues.filter((v) => v !== value);
+    setDraftFilters(prev => ({ ...prev, [dimension]: newValues }));
   };
   
   const addAiFilter = (filter: SuggestedFilter) => {
@@ -140,7 +104,7 @@ export function TopFilters() {
   };
 
 
-  const applyAdvancedFilters = () => {
+  const applyAllFilters = () => {
     let combinedFilters = { ...draftFilters };
 
     aiDraftFilters.forEach(filter => {
@@ -161,6 +125,11 @@ export function TopFilters() {
         // Extend with other dimensions as needed
       }
     });
+    
+    // Ensure uniqueness for multi-selects just in case
+    if (combinedFilters.businessTypes) combinedFilters.businessTypes = [...new Set(combinedFilters.businessTypes)];
+    if (combinedFilters.insuranceTypes) combinedFilters.insuranceTypes = [...new Set(combinedFilters.insuranceTypes)];
+    if (combinedFilters.newEnergyStatus) combinedFilters.newEnergyStatus = [...new Set(combinedFilters.newEnergyStatus)];
 
     setFilters(combinedFilters);
     setIsPopoverOpen(false);
@@ -168,7 +137,7 @@ export function TopFilters() {
     setSearchInput('');
     setSuggestedFilters([]);
     toast({
-      title: '更多筛选已应用',
+      title: '筛选已应用',
       description: '仪表板已根据您的选择更新。',
     });
   };
@@ -182,263 +151,188 @@ export function TopFilters() {
       variant: 'default',
     });
   };
-
-  const dimensionLabels: { [key: string]: string } = {
-    insuranceTypes: '车险种类',
-    coverageTypes: '险别组合',
-    newEnergyStatus: '是否新能源车',
-    transferredStatus: '是否过户车',
-  };
-
+  
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2 pb-4">
-      <div className="flex items-center gap-2">
-        <Label>保单年度:</Label>
-        <Select onValueChange={handleYearChange} value={filters.year || 'all'}>
-          <SelectTrigger className="w-[120px]" aria-label="按年份筛选">
-            <SelectValue placeholder="选择年度" />
-          </SelectTrigger>
-          <SelectContent>
-            {(filterOptions.years || []).map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-       <div className="flex items-center gap-2">
-        <Label>周序号:</Label>
-        <Select onValueChange={handleWeekNumberChange} value={filters.weekNumber || 'all'}>
-          <SelectTrigger className="w-[120px]" aria-label="按周序号筛选">
-            <SelectValue placeholder="选择周" />
-          </SelectTrigger>
-          <SelectContent>
-             <SelectItem value="all">全部</SelectItem>
-            {(filterOptions.weekNumbers || []).map((option) => (
-              <SelectItem key={option} value={option}>
-                {`第 ${option} 周`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Label>三级机构:</Label>
-        <Select onValueChange={handleRegionChange} value={filters.region || 'all'}>
-          <SelectTrigger className="w-[180px]" aria-label="按三级机构筛选">
-            <SelectValue placeholder="选择机构" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">全部</SelectItem>
-            <ScrollArea className="h-60">
-              {(filterOptions.regions || []).map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </ScrollArea>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Label>业务类型:</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-[200px] justify-between">
-              <span className="truncate">
-                {filters.businessTypes && filters.businessTypes.length > 0
-                  ? filters.businessTypes.join(', ')
-                  : '选择业务类型'}
-              </span>
-              <ChevronDown className="h-4 w-4 opacity-50" />
+    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm">
+          <SlidersHorizontal className="mr-2 h-4 w-4" />
+          智能筛选
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-96">
+        <div className="grid gap-4">
+          <div className="space-y-2">
+            <h4 className="font-medium leading-none">智能筛选</h4>
+            <p className="text-sm text-muted-foreground">
+              在这里手动配置或使用智能洞察。
+            </p>
+          </div>
+          <Separator />
+            <div className="relative">
+            <Input
+              type="search"
+              placeholder="输入“成都”、“新车”等获取智能建议..."
+              className="pr-8"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              aria-label="Predictive filter search"
+            />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-0 top-0 h-full w-10"
+              onClick={handleSearch}
+              disabled={isSearching}
+              aria-label="Search"
+            >
+              {isSearching ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <Search className="h-4 w-4" />}
             </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-             <ScrollArea className="h-60">
-                <div className="p-4 space-y-2">
-                {(filterOptions.businessTypes || []).map((option) => (
-                    <div key={option} className="flex items-center space-x-2">
-                    <Checkbox
-                        id={`businessType-${option}`}
-                        value={option}
-                        checked={(filters.businessTypes || []).includes(option)}
-                        onCheckedChange={(checked) =>
-                        handleBusinessTypeChange(option, !!checked)
-                        }
-                    />
-                    <Label htmlFor={`businessType-${option}`} className="font-normal">
-                        {option}
-                    </Label>
-                    </div>
-                ))}
-                </div>
-             </ScrollArea>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline">
-            <SlidersHorizontal className="mr-2 h-4 w-4" />
-            更多筛选
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-96">
-          <div className="grid gap-4">
+          </div>
+          
+          {suggestedFilters.length > 0 && (
             <div className="space-y-2">
-              <h4 className="font-medium leading-none">更多筛选</h4>
-              <p className="text-sm text-muted-foreground">
-                在这里手动配置或使用智能洞察。
-              </p>
+              <Label className="text-xs text-muted-foreground">筛选建议:</Label>
+              <div className="flex flex-wrap gap-1">
+                {suggestedFilters.map(filter => (
+                  <Button
+                    key={`${filter.dimension}-${filter.value}`}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => addAiFilter(filter)}
+                  >
+                    {filter.value}
+                  </Button>
+                ))}
+              </div>
             </div>
-            <Separator />
-             <div className="relative">
-              <Input
-                type="search"
-                placeholder="输入“成都”、“新车”等获取智能建议..."
-                className="pr-8"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                aria-label="Predictive filter search"
-              />
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="absolute right-0 top-0 h-full w-10"
-                onClick={handleSearch}
-                disabled={isSearching}
-                aria-label="Search"
-              >
-                {isSearching ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
-            
-            {suggestedFilters.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">筛选建议:</Label>
+          )}
+            {aiDraftFilters.length > 0 && (
+            <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">已选智能筛选:</Label>
                 <div className="flex flex-wrap gap-1">
-                  {suggestedFilters.map(filter => (
-                    <Button
-                      key={`${filter.dimension}-${filter.value}`}
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => addAiFilter(filter)}
-                    >
-                      {filter.value}
-                    </Button>
+                  {aiDraftFilters.map(filter => (
+                      <Badge key={`${filter.dimension}-${filter.value}`} variant="secondary" className="flex items-center gap-1">
+                          {filter.value}
+                          <button onClick={() => removeAiFilter(filter)} className="rounded-full hover:bg-muted-foreground/20">
+                              <X className="h-3 w-3"/>
+                          </button>
+                      </Badge>
                   ))}
                 </div>
-              </div>
-            )}
-             {aiDraftFilters.length > 0 && (
-              <div className="space-y-2">
-                 <Label className="text-xs text-muted-foreground">已选智能筛选:</Label>
-                 <div className="flex flex-wrap gap-1">
-                    {aiDraftFilters.map(filter => (
-                        <Badge key={`${filter.dimension}-${filter.value}`} variant="secondary" className="flex items-center gap-1">
-                            {filter.value}
-                            <button onClick={() => removeAiFilter(filter)} className="rounded-full hover:bg-muted-foreground/20">
-                               <X className="h-3 w-3"/>
-                            </button>
-                        </Badge>
-                    ))}
-                 </div>
-              </div>
-            )}
-
-
-            <Separator />
-            <Accordion type="multiple" className="w-full">
-                <AccordionItem value="insuranceTypes">
-                    <AccordionTrigger>{dimensionLabels['insuranceTypes']}</AccordionTrigger>
-                    <AccordionContent className="space-y-2 pt-2">
-                    {(filterOptions.insuranceTypes || []).map((option) => (
-                        <div key={option} className="flex items-center space-x-2">
-                        <Checkbox 
-                            id={`type-${option}`} 
-                            value={option}
-                            checked={(draftFilters.insuranceTypes || []).includes(option)}
-                            onCheckedChange={(checked) => handleInsuranceTypeChange(option, !!checked)}
-                        />
-                        <Label htmlFor={`type-${option}`} className="font-normal">
-                            {option}
-                        </Label>
-                        </div>
-                    ))}
-                    </AccordionContent>
-                </AccordionItem>
-                 <AccordionItem value="coverageTypes">
-                    <AccordionTrigger>{dimensionLabels['coverageTypes']}</AccordionTrigger>
-                    <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
-                    {(filterOptions.coverageTypes || []).map((option) => (
-                        <div key={option} className="flex items-center space-x-2">
-                        <Checkbox
-                            id={`coverageType-${option}`}
-                            value={option}
-                            checked={(draftFilters.coverageTypes || []).includes(option)}
-                            onCheckedChange={(checked) => handleCoverageTypeChange(option, !!checked)}
-                        />
-                        <Label htmlFor={`coverageType-${option}`} className="font-normal">
-                            {option}
-                        </Label>
-                        </div>
-                    ))}
-                    </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="newEnergyStatus">
-                    <AccordionTrigger>{dimensionLabels['newEnergyStatus']}</AccordionTrigger>
-                    <AccordionContent className="space-y-2 pt-2">
-                    {(filterOptions.newEnergyStatus || []).map((option) => (
-                        <div key={option} className="flex items-center space-x-2">
-                        <Checkbox
-                            id={`newEnergyStatus-${option}`}
-                            value={option}
-                            checked={(draftFilters.newEnergyStatus || []).includes(option)}
-                            onCheckedChange={(checked) => handleNewEnergyChange(option, !!checked)}
-                        />
-                        <Label htmlFor={`newEnergyStatus-${option}`} className="font-normal">
-                            {option}
-                        </Label>
-                        </div>
-                    ))}
-                    </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="transferredStatus">
-                    <AccordionTrigger>{dimensionLabels['transferredStatus']}</AccordionTrigger>
-                    <AccordionContent className="space-y-2 pt-2">
-                    {(filterOptions.transferredStatus || []).map((option) => (
-                        <div key={option} className="flex items-center space-x-2">
-                        <Checkbox
-                            id={`transferredStatus-${option}`}
-                            value={option}
-                            checked={(draftFilters.transferredStatus || []).includes(option)}
-                            onCheckedChange={(checked) => handleTransferredStatusChange(option, !!checked)}
-                        />
-                        <Label htmlFor={`transferredStatus-${option}`} className="font-normal">
-                            {option}
-                        </Label>
-                        </div>
-                    ))}
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
-            <Separator />
-            <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={resetDraft}>重置</Button>
-                <Button onClick={applyAdvancedFilters}>应用筛选</Button>
             </div>
+          )}
+
+
+          <Separator />
+          <Accordion type="multiple" className="w-full" defaultValue={['common']}>
+              <AccordionItem value="common">
+                <AccordionTrigger>常规筛选</AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>保单年度</Label>
+                      <Select onValueChange={(v) => handleSingleSelectChange('year', v)} value={draftFilters.year || 'all'}>
+                        <SelectTrigger><SelectValue/></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">全部</SelectItem>
+                          {(filterOptions.years || []).map((o) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                     <div className="space-y-2">
+                      <Label>周序号</Label>
+                      <Select onValueChange={(v) => handleSingleSelectChange('weekNumber', v)} value={draftFilters.weekNumber || 'all'}>
+                        <SelectTrigger><SelectValue/></SelectTrigger>
+                        <SelectContent>
+                           <SelectItem value="all">全部</SelectItem>
+                           {(filterOptions.weekNumbers || []).map((o) => (<SelectItem key={o} value={o}>{`第 ${o} 周`}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                      <Label>三级机构</Label>
+                      <Select onValueChange={(v) => handleSingleSelectChange('region', v)} value={draftFilters.region || 'all'}>
+                        <SelectTrigger><SelectValue/></SelectTrigger>
+                        <SelectContent><ScrollArea className="h-60">
+                           <SelectItem value="all">全部</SelectItem>
+                           {(filterOptions.regions || []).map((o) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}
+                        </ScrollArea></SelectContent>
+                      </Select>
+                  </div>
+                   <div className="space-y-2">
+                      <Label>业务类型</Label>
+                      <ScrollArea className="h-24 rounded-md border p-2">
+                      {(filterOptions.businessTypes || []).map((option) => (
+                          <div key={option} className="flex items-center space-x-2 p-1">
+                          <Checkbox id={`bt-${option}`} checked={(draftFilters.businessTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('businessTypes', option, !!c)} />
+                          <Label htmlFor={`bt-${option}`} className="font-normal">{option}</Label>
+                          </div>
+                      ))}
+                      </ScrollArea>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+              <AccordionItem value="advanced">
+                  <AccordionTrigger>高级筛选</AccordionTrigger>
+                  <AccordionContent className="space-y-4 pt-2">
+                     <div className="space-y-2">
+                      <Label>车险种类</Label>
+                      <div className="flex items-center space-x-4">
+                      {(filterOptions.insuranceTypes || []).map((option) => (
+                          <div key={option} className="flex items-center space-x-2">
+                          <Checkbox id={`it-${option}`} checked={(draftFilters.insuranceTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('insuranceTypes', option, !!c)} />
+                          <Label htmlFor={`it-${option}`} className="font-normal">{option}</Label>
+                          </div>
+                      ))}
+                      </div>
+                    </div>
+                     <div className="space-y-2">
+                      <Label>是否新能源</Label>
+                       <div className="flex items-center space-x-4">
+                      {(filterOptions.newEnergyStatus || []).map((option) => (
+                          <div key={option} className="flex items-center space-x-2">
+                          <Checkbox id={`ne-${option}`} checked={(draftFilters.newEnergyStatus || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('newEnergyStatus', option, !!c)} />
+                          <Label htmlFor={`ne-${option}`} className="font-normal">{option}</Label>
+                          </div>
+                      ))}
+                      </div>
+                    </div>
+                     <div className="space-y-2">
+                      <Label>是否过户车</Label>
+                       <div className="flex items-center space-x-4">
+                      {(filterOptions.transferredStatus || []).map((option) => (
+                          <div key={option} className="flex items-center space-x-2">
+                          <Checkbox id={`ts-${option}`} checked={(draftFilters.transferredStatus || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('transferredStatus', option, !!c)} />
+                          <Label htmlFor={`ts-${option}`} className="font-normal">{option}</Label>
+                          </div>
+                      ))}
+                      </div>
+                    </div>
+                     <div className="space-y-2">
+                      <Label>险别组合</Label>
+                      <ScrollArea className="h-32 rounded-md border p-2">
+                      {(filterOptions.coverageTypes || []).map((option) => (
+                          <div key={option} className="flex items-center space-x-2 p-1">
+                          <Checkbox id={`ct-${option}`} checked={(draftFilters.coverageTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('coverageTypes', option, !!c)} />
+                          <Label htmlFor={`ct-${option}`} className="font-normal">{option}</Label>
+                          </div>
+                      ))}
+                      </ScrollArea>
+                    </div>
+                  </AccordionContent>
+              </AccordionItem>
+          </Accordion>
+          <Separator />
+          <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={resetDraft}>重置</Button>
+              <Button onClick={applyAllFilters}>应用筛选</Button>
           </div>
-        </PopoverContent>
-      </Popover>
-    </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
-
-    

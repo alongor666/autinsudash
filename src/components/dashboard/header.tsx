@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import React from 'react';
 import { useData } from '@/contexts/data-context';
 import { parseCSV, exportToCSV } from '@/lib/csv';
+import { TopFilters } from './top-filters';
 
 export function DashboardHeader() {
   const { toast } = useToast();
@@ -78,6 +79,7 @@ export function DashboardHeader() {
             accept=".csv"
             onChange={handleFileUpload}
           />
+           <TopFilters />
           <Button
             variant="outline"
             size="sm"
