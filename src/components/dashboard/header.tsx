@@ -99,11 +99,9 @@ export function DashboardHeader() {
           <Settings className="h-5 w-5" />
           <span className="sr-only">设置</span>
         </Button>
-        <SidebarTrigger asChild>
-            <Button variant="outline" size="icon" className="rounded-full">
-                <Bot className="h-5 w-5" />
-                <span className="sr-only">AI 洞察</span>
-            </Button>
+        <SidebarTrigger variant="outline" size="icon" className="rounded-full">
+            <Bot className="h-5 w-5" />
+            <span className="sr-only">AI 洞察</span>
         </SidebarTrigger>
       </div>
     </header>
