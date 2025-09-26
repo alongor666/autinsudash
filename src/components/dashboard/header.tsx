@@ -1,7 +1,7 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Upload, Download, Settings, Bell, PanelLeft } from 'lucide-react';
+import { Upload, Download, Settings, Bell, Bot } from 'lucide-react';
 import { AppLogo } from '@/components/app-logo';
 import { useToast } from "@/hooks/use-toast";
 import React from 'react';
@@ -67,18 +67,11 @@ export function DashboardHeader() {
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
-      <div className="flex items-center gap-2">
-        <SidebarTrigger className="md:hidden">
-           <PanelLeft className="h-5 w-5" />
-           <span className="sr-only">高级筛选</span>
-        </SidebarTrigger>
-        <div className="hidden md:block">
-          <AppLogo/>
-        </div>
-      </div>
-      <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
-         <h1 className="text-xl font-semibold md:hidden"><AppLogo/></h1>
-        <div className="ml-auto flex items-center gap-2">
+       <div className="flex items-center gap-2">
+         <AppLogo/>
+       </div>
+
+      <div className="flex w-full items-center justify-end gap-2">
           <input
             type="file"
             id="csv-upload"
@@ -98,7 +91,6 @@ export function DashboardHeader() {
             <Download className="mr-2 h-4 w-4" />
             导出
           </Button>
-        </div>
         <Button variant="ghost" size="icon" className="rounded-full">
           <Bell className="h-5 w-5" />
           <span className="sr-only">通知</span>
@@ -107,6 +99,12 @@ export function DashboardHeader() {
           <Settings className="h-5 w-5" />
           <span className="sr-only">设置</span>
         </Button>
+        <SidebarTrigger asChild>
+            <Button variant="outline" size="icon" className="rounded-full">
+                <Bot className="h-5 w-5" />
+                <span className="sr-only">AI 洞察</span>
+            </Button>
+        </SidebarTrigger>
       </div>
     </header>
   );
