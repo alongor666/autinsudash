@@ -37,7 +37,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [kpiData, setKpiData] = useState(defaultKpiData);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [highlightedKpis, setHighlightedKpis] = useState<string[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load data from IndexedDB on initial mount
   useEffect(() => {
@@ -50,7 +49,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("Failed to load data from IndexedDB", error);
       }
-      setIsInitialized(true);
     }
     loadData();
   }, []);
@@ -59,6 +57,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     storeData(data)
       .then(() => {
         setRawDataState(data);
+        // Reset filters when new data is loaded to show a complete overview
+        setFilters({
+            year: null, region: null, insuranceTypes: null, businessTypes: null,
+            newEnergyStatus: null, weekNumber: null, transferredStatus: null, coverageTypes: null,
+        });
       })
       .catch((error) => {
         console.error("Failed to save data to IndexedDB", error);
@@ -82,8 +85,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [rawData]);
 
   useEffect(() => {
-    if (!isInitialized) return;
-    
     // Main filtering logic
     const newFilteredData = rawData.filter(row => {
       const yearMatch = !filters.year || row.policy_start_year.toString() === filters.year;
@@ -133,16 +134,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     setKpiData(calculateKPIs(newFilteredData, previousWeekData));
     setChartData(aggregateChartData(newFilteredData));
-  }, [filters, rawData, isInitialized]);
-
-   useEffect(() => {
-    if (isInitialized && rawData.length > 0 && filterOptions.years.length > 0) {
-      const latestYear = filterOptions.years[0];
-      if (filters.year !== latestYear) {
-         setFilters(f => ({ ...f, year: latestYear, region: null, weekNumber: null, businessTypes: null, insuranceTypes: null, newEnergyStatus: null, transferredStatus: null, coverageTypes: null }));
-      }
-    }
-  }, [rawData, filterOptions.years, isInitialized]);
+  }, [filters, rawData]);
 
   const value = {
     rawData,
