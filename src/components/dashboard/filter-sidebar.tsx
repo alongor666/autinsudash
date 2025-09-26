@@ -15,6 +15,11 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -22,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search } from 'lucide-react';
+import { Search, ChevronsUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useData } from '@/contexts/data-context';
@@ -48,6 +53,7 @@ export function FilterSidebar() {
   const [searchInput, setSearchInput] = useState('');
   const [suggestedFilters, setSuggestedFilters] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isMoreFiltersOpen, setIsMoreFiltersOpen] = useState(false);
   const { toast } = useToast();
   const { setOpen, isMobile } = useSidebar();
 
@@ -178,10 +184,9 @@ export function FilterSidebar() {
 
   const defaultOpen = [
     'year',
+    'weekNumbers',
     'regions',
-    'insuranceTypes',
     'businessTypes',
-    'newEnergyStatus'
   ];
 
   return (
@@ -268,7 +273,7 @@ export function FilterSidebar() {
 
           <AccordionItem value="regions">
             <AccordionTrigger>{dimensionLabels['regions']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2">
+            <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
               {filterOptions.regions.map((option) => (
                 <div key={option} className="flex items-center space-x-2">
                   <Checkbox 
@@ -303,84 +308,96 @@ export function FilterSidebar() {
               ))}
             </AccordionContent>
           </AccordionItem>
-
-          <AccordionItem value="insuranceTypes">
-            <AccordionTrigger>{dimensionLabels['insuranceTypes']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2">
-               {filterOptions.insuranceTypes.map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`type-${option}`} 
-                    value={option}
-                    checked={draftFilters.insuranceTypes.includes(option)}
-                    onCheckedChange={(checked) => handleInsuranceTypeChange(option, !!checked)}
-                  />
-                  <Label htmlFor={`type-${option}`} className="font-normal">
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="coverageTypes">
-            <AccordionTrigger>{dimensionLabels['coverageTypes']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
-              {filterOptions.coverageTypes.map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`coverageType-${option}`}
-                    value={option}
-                    checked={draftFilters.coverageTypes.includes(option)}
-                    onCheckedChange={(checked) => handleCoverageTypeChange(option, !!checked)}
-                  />
-                  <Label htmlFor={`coverageType-${option}`} className="font-normal">
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-          
-          <AccordionItem value="newEnergyStatus">
-            <AccordionTrigger>{dimensionLabels['newEnergyStatus']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2">
-              {filterOptions.newEnergyStatus.map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`newEnergyStatus-${option}`}
-                    value={option}
-                    checked={draftFilters.newEnergyStatus.includes(option)}
-                    onCheckedChange={(checked) => handleNewEnergyChange(option, !!checked)}
-                  />
-                  <Label htmlFor={`newEnergyStatus-${option}`} className="font-normal">
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="transferredStatus">
-            <AccordionTrigger>{dimensionLabels['transferredStatus']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2">
-              {filterOptions.transferredStatus.map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`transferredStatus-${option}`}
-                    value={option}
-                    checked={draftFilters.transferredStatus.includes(option)}
-                    onCheckedChange={(checked) => handleTransferredStatusChange(option, !!checked)}
-                  />
-                  <Label htmlFor={`transferredStatus-${option}`} className="font-normal">
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-
         </Accordion>
+        
+        <Collapsible open={isMoreFiltersOpen} onOpenChange={setIsMoreFiltersOpen} className="w-full px-2">
+            <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full justify-center mt-2">
+                    <span className="text-sm">{isMoreFiltersOpen ? '收起' : '更多筛选'}</span>
+                    <ChevronsUpDown className="h-4 w-4 ml-2" />
+                </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+                <Accordion type="multiple" className="w-full">
+                    <AccordionItem value="insuranceTypes">
+                        <AccordionTrigger>{dimensionLabels['insuranceTypes']}</AccordionTrigger>
+                        <AccordionContent className="space-y-2 pt-2">
+                        {filterOptions.insuranceTypes.map((option) => (
+                            <div key={option} className="flex items-center space-x-2">
+                            <Checkbox 
+                                id={`type-${option}`} 
+                                value={option}
+                                checked={draftFilters.insuranceTypes.includes(option)}
+                                onCheckedChange={(checked) => handleInsuranceTypeChange(option, !!checked)}
+                            />
+                            <Label htmlFor={`type-${option}`} className="font-normal">
+                                {option}
+                            </Label>
+                            </div>
+                        ))}
+                        </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="coverageTypes">
+                        <AccordionTrigger>{dimensionLabels['coverageTypes']}</AccordionTrigger>
+                        <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
+                        {filterOptions.coverageTypes.map((option) => (
+                            <div key={option} className="flex items-center space-x-2">
+                            <Checkbox
+                                id={`coverageType-${option}`}
+                                value={option}
+                                checked={draftFilters.coverageTypes.includes(option)}
+                                onCheckedChange={(checked) => handleCoverageTypeChange(option, !!checked)}
+                            />
+                            <Label htmlFor={`coverageType-${option}`} className="font-normal">
+                                {option}
+                            </Label>
+                            </div>
+                        ))}
+                        </AccordionContent>
+                    </AccordionItem>
+                    
+                    <AccordionItem value="newEnergyStatus">
+                        <AccordionTrigger>{dimensionLabels['newEnergyStatus']}</AccordionTrigger>
+                        <AccordionContent className="space-y-2 pt-2">
+                        {filterOptions.newEnergyStatus.map((option) => (
+                            <div key={option} className="flex items-center space-x-2">
+                            <Checkbox
+                                id={`newEnergyStatus-${option}`}
+                                value={option}
+                                checked={draftFilters.newEnergyStatus.includes(option)}
+                                onCheckedChange={(checked) => handleNewEnergyChange(option, !!checked)}
+                            />
+                            <Label htmlFor={`newEnergyStatus-${option}`} className="font-normal">
+                                {option}
+                            </Label>
+                            </div>
+                        ))}
+                        </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="transferredStatus">
+                        <AccordionTrigger>{dimensionLabels['transferredStatus']}</AccordionTrigger>
+                        <AccordionContent className="space-y-2 pt-2">
+                        {filterOptions.transferredStatus.map((option) => (
+                            <div key={option} className="flex items-center space-x-2">
+                            <Checkbox
+                                id={`transferredStatus-${option}`}
+                                value={option}
+                                checked={draftFilters.transferredStatus.includes(option)}
+                                onCheckedChange={(checked) => handleTransferredStatusChange(option, !!checked)}
+                            />
+                            <Label htmlFor={`transferredStatus-${option}`} className="font-normal">
+                                {option}
+                            </Label>
+                            </div>
+                        ))}
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
+            </CollapsibleContent>
+        </Collapsible>
+
       </SidebarContent>
       <SidebarGroup>
         <Separator className="mb-2" />

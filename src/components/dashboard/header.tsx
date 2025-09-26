@@ -1,7 +1,7 @@
 'use client';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Upload, Download, Settings, Bell } from 'lucide-react';
+import { Upload, Download, Settings, Bell, PanelLeft } from 'lucide-react';
 import { AppLogo } from '@/components/app-logo';
 import { useToast } from "@/hooks/use-toast";
 import React from 'react';
@@ -10,7 +10,7 @@ import { parseCSV, exportToCSV } from '@/lib/csv';
 
 export function DashboardHeader() {
   const { toast } = useToast();
-  const { rawData, setRawData, filteredData } = useData();
+  const { setRawData, filteredData } = useData();
   
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -68,9 +68,12 @@ export function DashboardHeader() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
       <div className="flex items-center gap-2">
-        <SidebarTrigger className="md:hidden" />
+        <SidebarTrigger>
+           <PanelLeft className="h-5 w-5" />
+           <span className="sr-only">Toggle filters</span>
+        </SidebarTrigger>
         <div className="hidden md:block">
-          {/* Logo is now in sidebar */}
+          {/* Logo is in sidebar */}
         </div>
       </div>
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
