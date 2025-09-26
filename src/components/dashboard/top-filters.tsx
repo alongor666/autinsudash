@@ -16,6 +16,7 @@ import type { Filters } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { businessTypeAliases } from '@/lib/data';
 import { SheetHeader, SheetTitle } from '../ui/sheet';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 interface TopFiltersProps {
   onApply: () => void;
@@ -39,6 +40,11 @@ export function TopFilters({ onApply }: TopFiltersProps) {
     const newValues = checked
       ? [...currentValues, value]
       : currentValues.filter((v) => v !== value);
+    setDraftFilters(prev => ({ ...prev, [dimension]: newValues.length > 0 ? newValues : null }));
+  };
+  
+  const handleRadioGroupChange = (dimension: keyof Filters, value: string) => {
+    const newValues = value === 'all' ? [] : [value];
     setDraftFilters(prev => ({ ...prev, [dimension]: newValues }));
   };
 
@@ -142,8 +148,50 @@ export function TopFilters({ onApply }: TopFiltersProps) {
               </div>
             </div>
             <div className="space-y-2">
+              <Label>是否新能源</Label>
+              <RadioGroup
+                value={(draftFilters.newEnergyStatus?.length ?? 0) > 0 ? draftFilters.newEnergyStatus![0] : 'all'}
+                onValueChange={(v) => handleRadioGroupChange('newEnergyStatus', v)}
+                className="flex items-center space-x-4 pt-1"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="all" id="nes-all" />
+                  <Label htmlFor="nes-all" className="font-normal">全部</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="是" id="nes-yes" />
+                  <Label htmlFor="nes-yes" className="font-normal">是</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="否" id="nes-no" />
+                  <Label htmlFor="nes-no" className="font-normal">否</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            <div className="space-y-2">
+              <Label>是否过户车</Label>
+              <RadioGroup
+                value={(draftFilters.transferredStatus?.length ?? 0) > 0 ? draftFilters.transferredStatus![0] : 'all'}
+                onValueChange={(v) => handleRadioGroupChange('transferredStatus', v)}
+                className="flex items-center space-x-4 pt-1"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="all" id="ts-all" />
+                  <Label htmlFor="ts-all" className="font-normal">全部</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="是" id="ts-yes" />
+                  <Label htmlFor="ts-yes" className="font-normal">过户</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="否" id="ts-no" />
+                  <Label htmlFor="ts-no" className="font-normal">非过户</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            <div className="space-y-2 flex-1 flex flex-col">
               <Label>险别组合</Label>
-                <ScrollArea className="h-32 rounded-md border p-2">
+                <ScrollArea className="flex-1 h-32 rounded-md border p-2">
                 {(filterOptions.coverageTypes || []).map((option) => (
                     <div key={option} className="flex items-center space-x-2 p-1">
                     <Checkbox id={`ct-${option}`} checked={(draftFilters.coverageTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('coverageTypes', option, !!c)} />
@@ -151,28 +199,6 @@ export function TopFilters({ onApply }: TopFiltersProps) {
                     </div>
                 ))}
                 </ScrollArea>
-            </div>
-             <div className="space-y-2">
-              <Label>是否新能源</Label>
-               <div className="flex flex-col space-y-2 pt-1">
-              {(filterOptions.newEnergyStatus || []).map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
-                  <Checkbox id={`ne-${option}`} checked={(draftFilters.newEnergyStatus || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('newEnergyStatus', option, !!c)} />
-                  <Label htmlFor={`ne-${option}`} className="font-normal">{option}</Label>
-                  </div>
-              ))}
-              </div>
-            </div>
-             <div className="space-y-2">
-              <Label>是否过户车</Label>
-               <div className="flex flex-col space-y-2 pt-1">
-              {(filterOptions.transferredStatus || []).map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
-                  <Checkbox id={`ts-${option}`} checked={(draftFilters.transferredStatus || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('transferredStatus', option, !!c)} />
-                  <Label htmlFor={`ts-${option}`} className="font-normal">{option}</Label>
-                  </div>
-              ))}
-              </div>
             </div>
           </div>
           {/* Column 2: Regions */}

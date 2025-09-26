@@ -30,7 +30,7 @@ export type BusinessTypeAlias = {
 
 export type Filters = {
   year: string | null;
-  region: string | null;
+  region: string[] | null;
   weekNumber: string | null;
   businessTypes: string[] | null;
   insuranceTypes: string[] | null;

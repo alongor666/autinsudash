@@ -86,14 +86,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     const newFilteredData = rawData.filter(row => {
       const yearMatch = !filters.year || row.policy_start_year.toString() === filters.year;
-      const regionMatch = !filters.region || row.third_level_organization === filters.region;
+      const regionMatch = !filters.region || filters.region.length === 0 || filters.region.includes(row.third_level_organization);
       const weekNumberMatch = !filters.weekNumber || row.week_number.toString() === filters.weekNumber;
       
-      const typeMatch = (filters.insuranceTypes?.length || 0) === 0 || filters.insuranceTypes?.includes(row.insurance_type);
-      const businessTypeMatch = (filters.businessTypes?.length || 0) === 0 || filters.businessTypes?.includes(row.business_type_category);
-      const newEnergyStatusMatch = (filters.newEnergyStatus?.length || 0) === 0 || filters.newEnergyStatus?.includes(row.is_new_energy_vehicle);
-      const transferredStatusMatch = (filters.transferredStatus?.length || 0) === 0 || filters.transferredStatus?.includes(row.is_transferred_vehicle);
-      const coverageTypeMatch = (filters.coverageTypes?.length || 0) === 0 || filters.coverageTypes?.includes(row.coverage_type);
+      const typeMatch = (filters.insuranceTypes?.length ?? 0) === 0 || filters.insuranceTypes?.includes(row.insurance_type);
+      const businessTypeMatch = (filters.businessTypes?.length ?? 0) === 0 || filters.businessTypes?.includes(row.business_type_category);
+      const newEnergyStatusMatch = (filters.newEnergyStatus?.length ?? 0) === 0 || filters.newEnergyStatus?.includes(row.is_new_energy_vehicle);
+      const transferredStatusMatch = (filters.transferredStatus?.length ?? 0) === 0 || filters.transferredStatus?.includes(row.is_transferred_vehicle);
+      const coverageTypeMatch = (filters.coverageTypes?.length ?? 0) === 0 || filters.coverageTypes?.includes(row.coverage_type);
       
       return yearMatch && regionMatch && weekNumberMatch && typeMatch && businessTypeMatch && newEnergyStatusMatch && transferredStatusMatch && coverageTypeMatch;
     });
