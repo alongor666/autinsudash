@@ -6,6 +6,7 @@ import { KpiGrid } from '@/components/dashboard/kpi-grid';
 import { MainChart } from '@/components/dashboard/main-chart';
 import { FilterSidebar } from '@/components/dashboard/filter-sidebar';
 import { DataProvider } from '@/contexts/data-context';
+import { TopFilters } from '@/components/dashboard/top-filters';
 
 export default function DashboardPage() {
 
@@ -16,6 +17,7 @@ export default function DashboardPage() {
         <SidebarInset>
           <DashboardHeader />
           <main className="flex-1 space-y-4 p-4 md:p-6">
+            <TopFilters />
             <KpiGrid />
             <div className="grid gap-4 md:grid-cols-1">
               <MainChart />

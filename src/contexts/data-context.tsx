@@ -25,11 +25,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [filteredData, setFilteredData] = useState<RawDataRow[]>([]);
   const [filters, setFilters] = useState<Filters>({
     year: null,
-    regions: [],
+    region: null,
     insuranceTypes: [],
     businessTypes: [],
     newEnergyStatus: [],
-    weekNumbers: [],
+    weekNumber: null,
     transferredStatus: [],
     coverageTypes: [],
   });
@@ -55,15 +55,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const newFilteredData = rawData.filter(row => {
       const yearMatch = !filters.year || row.policy_start_year.toString() === filters.year;
-      const regionMatch = filters.regions.length === 0 || filters.regions.includes(row.third_level_organization);
-      const typeMatch = filters.insuranceTypes.length === 0 || filters.insuranceTypes.includes(row.insurance_type);
-      const businessTypeMatch = filters.businessTypes.length === 0 || filters.businessTypes.includes(row.business_type_category);
-      const newEnergyStatusMatch = filters.newEnergyStatus.length === 0 || filters.newEnergyStatus.includes(row.is_new_energy_vehicle);
-      const weekNumberMatch = filters.weekNumbers.length === 0 || filters.weekNumbers.includes(row.week_number.toString());
-      const transferredStatusMatch = filters.transferredStatus.length === 0 || filters.transferredStatus.includes(row.is_transferred_vehicle);
-      const coverageTypeMatch = filters.coverageTypes.length === 0 || filters.coverageTypes.includes(row.coverage_type);
+      const regionMatch = !filters.region || row.third_level_organization === filters.region;
+      const weekNumberMatch = !filters.weekNumber || row.week_number.toString() === filters.weekNumber;
       
-      return yearMatch && regionMatch && typeMatch && businessTypeMatch && newEnergyStatusMatch && weekNumberMatch && transferredStatusMatch && coverageTypeMatch;
+      const typeMatch = (filters.insuranceTypes?.length || 0) === 0 || filters.insuranceTypes?.includes(row.insurance_type);
+      const businessTypeMatch = (filters.businessTypes?.length || 0) === 0 || filters.businessTypes?.includes(row.business_type_category);
+      const newEnergyStatusMatch = (filters.newEnergyStatus?.length || 0) === 0 || filters.newEnergyStatus?.includes(row.is_new_energy_vehicle);
+      const transferredStatusMatch = (filters.transferredStatus?.length || 0) === 0 || filters.transferredStatus?.includes(row.is_transferred_vehicle);
+      const coverageTypeMatch = (filters.coverageTypes?.length || 0) === 0 || filters.coverageTypes?.includes(row.coverage_type);
+      
+      return yearMatch && regionMatch && weekNumberMatch && typeMatch && businessTypeMatch && newEnergyStatusMatch && transferredStatusMatch && coverageTypeMatch;
     });
     setFilteredData(newFilteredData);
     setKpiData(calculateKPIs(newFilteredData));
@@ -74,7 +75,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     if (rawData.length > 0 && filterOptions.years.length > 0) {
       const latestYear = filterOptions.years[0];
       if (filters.year !== latestYear) {
-         setFilters(f => ({ ...f, year: latestYear, regions: [], insuranceTypes: [], businessTypes: [], newEnergyStatus: [], weekNumbers: [], transferredStatus: [], coverageTypes: [] }));
+         setFilters(f => ({ ...f, year: latestYear, region: null, weekNumber: null, businessTypes: [], insuranceTypes: [], newEnergyStatus: [], transferredStatus: [], coverageTypes: [] }));
       }
     }
   }, [rawData, filterOptions.years]);

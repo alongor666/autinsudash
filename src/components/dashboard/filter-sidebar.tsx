@@ -19,13 +19,6 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Search, ChevronsUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -98,62 +91,37 @@ export function FilterSidebar() {
 
   const debouncedSearch = useCallback(debounce(handleSearch, 300), [filterOptions]);
 
-  const handleYearChange = (year: string) => {
-    setDraftFilters({ ...draftFilters, year });
-  };
-  
-  const handleRegionChange = (region: string, checked: boolean) => {
-    const newRegions = checked
-      ? [...draftFilters.regions, region]
-      : draftFilters.regions.filter((r) => r !== region);
-    setDraftFilters({ ...draftFilters, regions: newRegions });
-  };
-
   const handleInsuranceTypeChange = (type: string, checked: boolean) => {
      const newTypes = checked
-      ? [...draftFilters.insuranceTypes, type]
-      : draftFilters.insuranceTypes.filter((t) => t !== type);
+      ? [...(draftFilters.insuranceTypes || []), type]
+      : (draftFilters.insuranceTypes || []).filter((t) => t !== type);
     setDraftFilters({ ...draftFilters, insuranceTypes: newTypes });
   };
 
-  const handleBusinessTypeChange = (type: string, checked: boolean) => {
-    const newTypes = checked
-     ? [...draftFilters.businessTypes, type]
-     : draftFilters.businessTypes.filter((t) => t !== type);
-   setDraftFilters({ ...draftFilters, businessTypes: newTypes });
- };
-
  const handleNewEnergyChange = (status: string, checked: boolean) => {
     const newStatus = checked
-     ? [...draftFilters.newEnergyStatus, status]
-     : draftFilters.newEnergyStatus.filter((s) => s !== status);
+     ? [...(draftFilters.newEnergyStatus || []), status]
+     : (draftFilters.newEnergyStatus || []).filter((s) => s !== status);
     setDraftFilters({ ...draftFilters, newEnergyStatus: newStatus });
  };
 
- const handleWeekNumberChange = (week: string, checked: boolean) => {
-    const newWeeks = checked
-      ? [...draftFilters.weekNumbers, week]
-      : draftFilters.weekNumbers.filter(w => w !== week);
-    setDraftFilters({ ...draftFilters, weekNumbers: newWeeks });
-  };
-
   const handleTransferredStatusChange = (status: string, checked: boolean) => {
     const newStatus = checked
-      ? [...draftFilters.transferredStatus, status]
-      : draftFilters.transferredStatus.filter(s => s !== status);
+      ? [...(draftFilters.transferredStatus || []), status]
+      : (draftFilters.transferredStatus || []).filter(s => s !== status);
     setDraftFilters({ ...draftFilters, transferredStatus: newStatus });
   };
 
   const handleCoverageTypeChange = (type: string, checked: boolean) => {
     const newTypes = checked
-      ? [...draftFilters.coverageTypes, type]
-      : draftFilters.coverageTypes.filter(t => t !== type);
+      ? [...(draftFilters.coverageTypes || []), type]
+      : (draftFilters.coverageTypes || []).filter(t => t !== type);
     setDraftFilters({ ...draftFilters, coverageTypes: newTypes });
   };
   
   const applyFilters = () => {
     setFilters(draftFilters);
-    if (!isMobile) {
+    if (isMobile) {
       setOpen(false);
     }
     toast({
@@ -172,22 +140,11 @@ export function FilterSidebar() {
   };
 
   const dimensionLabels: { [key: string]: string } = {
-    year: '保单年度',
-    weekNumbers: '周序号',
-    regions: '三级机构',
-    businessTypes: '业务类型',
     insuranceTypes: '车险种类',
     coverageTypes: '险别组合',
     newEnergyStatus: '是否新能源车',
     transferredStatus: '是否过户车',
   };
-
-  const defaultOpen = [
-    'year',
-    'weekNumbers',
-    'regions',
-    'businessTypes',
-  ];
 
   return (
     <Sidebar>
@@ -219,11 +176,6 @@ export function FilterSidebar() {
                     variant="outline"
                     size="sm"
                     className="h-7 text-xs"
-                    onClick={() => {
-                      if (filterOptions.years.includes(filter)) handleYearChange(filter);
-                      if (filterOptions.regions.includes(filter)) handleRegionChange(filter, !draftFilters.regions.includes(filter));
-                      if (filterOptions.insuranceTypes.includes(filter)) handleInsuranceTypeChange(filter, !draftFilters.insuranceTypes.includes(filter));
-                    }}
                   >
                     {filter}
                   </Button>
@@ -232,88 +184,11 @@ export function FilterSidebar() {
             </div>
           )}
         </SidebarGroup>
-        <Accordion type="multiple" defaultValue={defaultOpen} className="w-full px-2">
-          
-          <AccordionItem value="year">
-            <AccordionTrigger>{dimensionLabels['year']}</AccordionTrigger>
-            <AccordionContent className="space-y-4 pt-2">
-              <Select onValueChange={handleYearChange} value={draftFilters.year || ''}>
-                <SelectTrigger aria-label="按年份筛选">
-                  <SelectValue placeholder="年度" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filterOptions.years.map((option) => (
-                    <SelectItem key={option} value={option}>
-                       {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </AccordionContent>
-          </AccordionItem>
-          
-          <AccordionItem value="weekNumbers">
-            <AccordionTrigger>{dimensionLabels['weekNumbers']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
-              {filterOptions.weekNumbers.map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`weekNumber-${option}`}
-                    value={option}
-                    checked={draftFilters.weekNumbers.includes(option)}
-                    onCheckedChange={(checked) => handleWeekNumberChange(option, !!checked)}
-                  />
-                  <Label htmlFor={`weekNumber-${option}`} className="font-normal">
-                    {`第 ${option} 周`}
-                  </Label>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
 
-          <AccordionItem value="regions">
-            <AccordionTrigger>{dimensionLabels['regions']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
-              {filterOptions.regions.map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`region-${option}`} 
-                    value={option}
-                    checked={draftFilters.regions.includes(option)}
-                    onCheckedChange={(checked) => handleRegionChange(option, !!checked)}
-                  />
-                  <Label htmlFor={`region-${option}`} className="font-normal">
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-          
-          <AccordionItem value="businessTypes">
-            <AccordionTrigger>{dimensionLabels['businessTypes']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2">
-              {filterOptions.businessTypes.map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`businessType-${option}`}
-                    value={option}
-                    checked={draftFilters.businessTypes.includes(option)}
-                    onCheckedChange={(checked) => handleBusinessTypeChange(option, !!checked)}
-                  />
-                  <Label htmlFor={`businessType-${option}`} className="font-normal">
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-        
         <Collapsible open={isMoreFiltersOpen} onOpenChange={setIsMoreFiltersOpen} className="w-full px-2">
             <CollapsibleTrigger asChild>
                 <Button variant="ghost" className="w-full justify-center mt-2">
-                    <span className="text-sm">{isMoreFiltersOpen ? '收起' : '更多筛选'}</span>
+                    <span className="text-sm">{isMoreFiltersOpen ? '收起高级筛选' : '高级筛选'}</span>
                     <ChevronsUpDown className="h-4 w-4 ml-2" />
                 </Button>
             </CollapsibleTrigger>
@@ -322,12 +197,12 @@ export function FilterSidebar() {
                     <AccordionItem value="insuranceTypes">
                         <AccordionTrigger>{dimensionLabels['insuranceTypes']}</AccordionTrigger>
                         <AccordionContent className="space-y-2 pt-2">
-                        {filterOptions.insuranceTypes.map((option) => (
+                        {(filterOptions.insuranceTypes || []).map((option) => (
                             <div key={option} className="flex items-center space-x-2">
                             <Checkbox 
                                 id={`type-${option}`} 
                                 value={option}
-                                checked={draftFilters.insuranceTypes.includes(option)}
+                                checked={(draftFilters.insuranceTypes || []).includes(option)}
                                 onCheckedChange={(checked) => handleInsuranceTypeChange(option, !!checked)}
                             />
                             <Label htmlFor={`type-${option}`} className="font-normal">
@@ -341,12 +216,12 @@ export function FilterSidebar() {
                     <AccordionItem value="coverageTypes">
                         <AccordionTrigger>{dimensionLabels['coverageTypes']}</AccordionTrigger>
                         <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
-                        {filterOptions.coverageTypes.map((option) => (
+                        {(filterOptions.coverageTypes || []).map((option) => (
                             <div key={option} className="flex items-center space-x-2">
                             <Checkbox
                                 id={`coverageType-${option}`}
                                 value={option}
-                                checked={draftFilters.coverageTypes.includes(option)}
+                                checked={(draftFilters.coverageTypes || []).includes(option)}
                                 onCheckedChange={(checked) => handleCoverageTypeChange(option, !!checked)}
                             />
                             <Label htmlFor={`coverageType-${option}`} className="font-normal">
@@ -360,12 +235,12 @@ export function FilterSidebar() {
                     <AccordionItem value="newEnergyStatus">
                         <AccordionTrigger>{dimensionLabels['newEnergyStatus']}</AccordionTrigger>
                         <AccordionContent className="space-y-2 pt-2">
-                        {filterOptions.newEnergyStatus.map((option) => (
+                        {(filterOptions.newEnergyStatus || []).map((option) => (
                             <div key={option} className="flex items-center space-x-2">
                             <Checkbox
                                 id={`newEnergyStatus-${option}`}
                                 value={option}
-                                checked={draftFilters.newEnergyStatus.includes(option)}
+                                checked={(draftFilters.newEnergyStatus || []).includes(option)}
                                 onCheckedChange={(checked) => handleNewEnergyChange(option, !!checked)}
                             />
                             <Label htmlFor={`newEnergyStatus-${option}`} className="font-normal">
@@ -379,12 +254,12 @@ export function FilterSidebar() {
                     <AccordionItem value="transferredStatus">
                         <AccordionTrigger>{dimensionLabels['transferredStatus']}</AccordionTrigger>
                         <AccordionContent className="space-y-2 pt-2">
-                        {filterOptions.transferredStatus.map((option) => (
+                        {(filterOptions.transferredStatus || []).map((option) => (
                             <div key={option} className="flex items-center space-x-2">
                             <Checkbox
                                 id={`transferredStatus-${option}`}
                                 value={option}
-                                checked={draftFilters.transferredStatus.includes(option)}
+                                checked={(draftFilters.transferredStatus || []).includes(option)}
                                 onCheckedChange={(checked) => handleTransferredStatusChange(option, !!checked)}
                             />
                             <Label htmlFor={`transferredStatus-${option}`} className="font-normal">

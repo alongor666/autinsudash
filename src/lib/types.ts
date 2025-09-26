@@ -22,13 +22,13 @@ export type FilterOptions = {
 
 export type Filters = {
   year: string | null;
-  regions: string[];
-  insuranceTypes: string[];
-  businessTypes: string[];
-  newEnergyStatus: string[];
-  weekNumbers: string[];
-  transferredStatus: string[];
-  coverageTypes: string[];
+  region: string | null;
+  weekNumber: string | null;
+  businessTypes: string[] | null;
+  insuranceTypes: string[] | null;
+  newEnergyStatus: string[] | null;
+  transferredStatus: string[] | null;
+  coverageTypes: string[] | null;
 }
 
 export type RawDataRow = {
