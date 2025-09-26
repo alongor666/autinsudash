@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { AppLogo } from '@/components/app-logo';
 import {
   Sidebar,
@@ -29,6 +29,8 @@ import { useToast } from '@/hooks/use-toast';
 import { getPredictiveSuggestions } from '@/app/actions';
 import { kpiListForAI } from '@/lib/data';
 import { Button } from '../ui/button';
+import type { Filters } from '@/lib/types';
+import { Separator } from '../ui/separator';
 
 function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
   let timeout: NodeJS.Timeout;
@@ -41,10 +43,16 @@ function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
 
 export function FilterSidebar() {
   const { filterOptions, filters, setFilters } = useData();
+  const [draftFilters, setDraftFilters] = useState<Filters>(filters);
   const [searchInput, setSearchInput] = useState('');
   const [suggestedFilters, setSuggestedFilters] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setDraftFilters(filters);
+  }, [filters]);
+
 
   const handleSearch = async (query: string) => {
     setSearchInput(query);
@@ -82,23 +90,39 @@ export function FilterSidebar() {
   const debouncedSearch = useCallback(debounce(handleSearch, 300), [filterOptions]);
 
   const handleYearChange = (year: string) => {
-    setFilters({ ...filters, year });
+    setDraftFilters({ ...draftFilters, year });
   };
   
   const handleRegionChange = (region: string, checked: boolean) => {
     const newRegions = checked
-      ? [...filters.regions, region]
-      : filters.regions.filter((r) => r !== region);
-    setFilters({ ...filters, regions: newRegions });
+      ? [...draftFilters.regions, region]
+      : draftFilters.regions.filter((r) => r !== region);
+    setDraftFilters({ ...draftFilters, regions: newRegions });
   };
 
   const handleInsuranceTypeChange = (type: string, checked: boolean) => {
      const newTypes = checked
-      ? [...filters.insuranceTypes, type]
-      : filters.insuranceTypes.filter((t) => t !== type);
-    setFilters({ ...filters, insuranceTypes: newTypes });
+      ? [...draftFilters.insuranceTypes, type]
+      : draftFilters.insuranceTypes.filter((t) => t !== type);
+    setDraftFilters({ ...draftFilters, insuranceTypes: newTypes });
+  };
+  
+  const applyFilters = () => {
+    setFilters(draftFilters);
+    toast({
+      title: '筛选已更新',
+      description: '仪表板已根据您的选择更新。',
+    });
   };
 
+  const resetDraft = () => {
+    setDraftFilters(filters);
+     toast({
+      title: '重置成功',
+      description: '筛选条件已恢复。',
+      variant: 'default',
+    });
+  };
 
   const dimensionLabels: { [key: string]: string } = {
     time: '时间',
@@ -138,8 +162,8 @@ export function FilterSidebar() {
                     className="h-7 text-xs"
                     onClick={() => {
                       if (filterOptions.years.includes(filter)) handleYearChange(filter);
-                      if (filterOptions.regions.includes(filter)) handleRegionChange(filter, !filters.regions.includes(filter));
-                      if (filterOptions.insuranceTypes.includes(filter)) handleInsuranceTypeChange(filter, !filters.insuranceTypes.includes(filter));
+                      if (filterOptions.regions.includes(filter)) handleRegionChange(filter, !draftFilters.regions.includes(filter));
+                      if (filterOptions.insuranceTypes.includes(filter)) handleInsuranceTypeChange(filter, !draftFilters.insuranceTypes.includes(filter));
                     }}
                   >
                     {filter}
@@ -154,7 +178,7 @@ export function FilterSidebar() {
           <AccordionItem value="time">
             <AccordionTrigger>{dimensionLabels['time']}</AccordionTrigger>
             <AccordionContent className="space-y-4 pt-2">
-              <Select onValueChange={handleYearChange} value={filters.year || ''}>
+              <Select onValueChange={handleYearChange} value={draftFilters.year || ''}>
                 <SelectTrigger aria-label="按年份筛选">
                   <SelectValue placeholder="年度" />
                 </SelectTrigger>
@@ -177,7 +201,7 @@ export function FilterSidebar() {
                   <Checkbox 
                     id={`region-${option}`} 
                     value={option}
-                    checked={filters.regions.includes(option)}
+                    checked={draftFilters.regions.includes(option)}
                     onCheckedChange={(checked) => handleRegionChange(option, !!checked)}
                   />
                   <Label htmlFor={`region-${option}`} className="font-normal">
@@ -196,7 +220,7 @@ export function FilterSidebar() {
                   <Checkbox 
                     id={`type-${option}`} 
                     value={option}
-                    checked={filters.insuranceTypes.includes(option)}
+                    checked={draftFilters.insuranceTypes.includes(option)}
                     onCheckedChange={(checked) => handleInsuranceTypeChange(option, !!checked)}
                   />
                   <Label htmlFor={`type-${option}`} className="font-normal">
@@ -209,6 +233,13 @@ export function FilterSidebar() {
 
         </Accordion>
       </SidebarContent>
+      <SidebarGroup>
+        <Separator className="mb-2" />
+        <div className="flex flex-col gap-2">
+            <Button onClick={applyFilters}>应用筛选</Button>
+            <Button variant="ghost" onClick={resetDraft}>重置</Button>
+        </div>
+      </SidebarGroup>
     </Sidebar>
   );
 }
