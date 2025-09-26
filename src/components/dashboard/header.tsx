@@ -1,7 +1,6 @@
 'use client';
 import { Button } from '@/components/ui/button';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Upload, Download, Settings, Bell, Bot } from 'lucide-react';
+import { Upload, Download, Settings, Bell } from 'lucide-react';
 import { AppLogo } from '@/components/app-logo';
 import { useToast } from "@/hooks/use-toast";
 import React from 'react';
@@ -99,10 +98,6 @@ export function DashboardHeader() {
           <Settings className="h-5 w-5" />
           <span className="sr-only">设置</span>
         </Button>
-        <SidebarTrigger variant="outline" size="icon" className="rounded-full">
-            <Bot className="h-5 w-5" />
-            <span className="sr-only">AI 洞察</span>
-        </SidebarTrigger>
       </div>
     </header>
   );

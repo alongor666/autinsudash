@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useData } from '@/contexts/data-context';
 import {
   Select,
@@ -16,7 +16,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal, Search } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import {
   Accordion,
@@ -27,12 +27,66 @@ import {
 import type { Filters } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '../ui/separator';
+import { Input } from '../ui/input';
+import { getPredictiveSuggestions } from '@/app/actions';
+import { kpiListForAI } from '@/lib/data';
+
+function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), delay);
+  };
+}
+
 
 export function TopFilters() {
-  const { filterOptions, filters, setFilters } = useData();
+  const { filterOptions, filters, setFilters, setHighlightedKpis } = useData();
   const [draftFilters, setDraftFilters] = useState<Filters>(filters);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const { toast } = useToast();
+
+  const [searchInput, setSearchInput] = useState('');
+  const [suggestedFilters, setSuggestedFilters] = useState<string[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+
+  const handleSearch = async (query: string) => {
+    setSearchInput(query);
+    if (!query) {
+      setSuggestedFilters([]);
+      setHighlightedKpis([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const availableFilters = Object.values(filterOptions).flat();
+      const historicalUserBehavior = "用户经常在查看'北京'地区的'商业险'后，关注'赔付率'和'承保利润率'。";
+      
+      const result = await getPredictiveSuggestions({
+        searchInput: query,
+        availableFilters,
+        kpiList: kpiListForAI,
+        historicalUserBehavior,
+      });
+
+      setSuggestedFilters(result.suggestedFilters || []);
+      setHighlightedKpis(result.highlightedKpis || []);
+    } catch (error) {
+      console.error("Error getting predictive suggestions:", error);
+      toast({
+        variant: 'destructive',
+        title: 'AI 建议出错',
+        description: '无法获取预测性筛选建议。',
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const debouncedSearch = useCallback(debounce(handleSearch, 300), [filterOptions, setHighlightedKpis, toast]);
+
 
   useEffect(() => {
     setDraftFilters(filters);
@@ -214,9 +268,39 @@ export function TopFilters() {
             <div className="space-y-2">
               <h4 className="font-medium leading-none">更多筛选</h4>
               <p className="text-sm text-muted-foreground">
-                在这里选择更多筛选维度。
+                在这里选择更多筛选维度或使用智能洞察。
               </p>
             </div>
+            <Separator />
+             <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="智能洞察..."
+                className="pl-8"
+                onChange={(e) => debouncedSearch(e.target.value)}
+                aria-label="Predictive filter search"
+              />
+              {isSearching && <div className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />}
+            </div>
+            {suggestedFilters.length > 0 && (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">筛选建议:</Label>
+                <div className="flex flex-wrap gap-1">
+                  {suggestedFilters.map(filter => (
+                    <Button
+                      key={filter}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                    >
+                      {filter}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <Separator />
             <Accordion type="multiple" className="w-full">
                 <AccordionItem value="insuranceTypes">
                     <AccordionTrigger>{dimensionLabels['insuranceTypes']}</AccordionTrigger>
