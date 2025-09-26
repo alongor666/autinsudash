@@ -219,6 +219,55 @@ src/
 - `tailwind.config.js`：主题配置
 - `src/app/globals.css`：全局样式和自定义CSS
 
+## 上传到 GitHub
+
+您可以按照以下步骤将此项目上传到您自己的 GitHub 仓库。
+
+### 第一步：准备本地仓库
+
+在您的项目根目录打开终端，然后执行以下命令：
+
+1.  **初始化 Git**：
+    ```bash
+    git init -b main
+    ```
+
+2.  **添加所有文件到暂存区**：
+    > `.gitignore` 文件已为您创建好，它会自动忽略 `node_modules` 等不需要上传的文件。
+    ```bash
+    git add .
+    ```
+
+3.  **创建第一次提交**：
+    ```bash
+    git commit -m "Initial commit"
+    ```
+
+### 第二步：在 GitHub 创建远程仓库
+
+1.  登录您的 GitHub 账户。
+2.  点击页面右上角的 **+** 号，选择 **New repository**。
+3.  为您的仓库命名（例如 `car-insurance-dashboard`）。
+4.  将仓库设置为 **Public**（公开）或 **Private**（私有）。
+5.  **不要** 勾选 "Add a README file" 或 "Add .gitignore"。
+6.  点击 **Create repository**。
+
+### 第三步：关联并推送代码
+
+创建仓库后，复制页面上提供的仓库 URL。回到您的终端执行以下命令：
+
+1.  **关联远程仓库** (请将 URL 替换为您自己的):
+    ```bash
+    git remote add origin https://github.com/YourUsername/YourRepositoryName.git
+    ```
+
+2.  **推送代码到 GitHub**:
+    ```bash
+    git push -u origin main
+    ```
+
+完成这些步骤后，您的项目代码就会出现在您的 GitHub 仓库中。
+
 ## 故障排除
 
 ### 常见问题
