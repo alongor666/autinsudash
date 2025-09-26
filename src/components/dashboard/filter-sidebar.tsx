@@ -6,6 +6,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarHeader,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   Accordion,
@@ -48,6 +49,8 @@ export function FilterSidebar() {
   const [suggestedFilters, setSuggestedFilters] = useState<string[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
+  const { setOpen, isMobile } = useSidebar();
+
 
   useEffect(() => {
     setDraftFilters(filters);
@@ -144,8 +147,11 @@ export function FilterSidebar() {
   
   const applyFilters = () => {
     setFilters(draftFilters);
+    if (!isMobile) {
+      setOpen(false);
+    }
     toast({
-      title: '筛选已更新',
+      title: '筛选已应用',
       description: '仪表板已根据您的选择更新。',
     });
   };
@@ -161,13 +167,13 @@ export function FilterSidebar() {
 
   const dimensionLabels: { [key: string]: string } = {
     year: '保单年度',
-    regions: '三级机构',
-    insuranceTypes: '车险种类',
-    businessTypes: '业务类型',
-    newEnergyStatus: '是否新能源车',
     weekNumbers: '周序号',
-    transferredStatus: '是否过户车',
+    regions: '三级机构',
+    businessTypes: '业务类型',
+    insuranceTypes: '车险种类',
     coverageTypes: '险别组合',
+    newEnergyStatus: '是否新能源车',
+    transferredStatus: '是否过户车',
   };
 
   const defaultOpen = [
@@ -240,6 +246,25 @@ export function FilterSidebar() {
               </Select>
             </AccordionContent>
           </AccordionItem>
+          
+          <AccordionItem value="weekNumbers">
+            <AccordionTrigger>{dimensionLabels['weekNumbers']}</AccordionTrigger>
+            <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
+              {filterOptions.weekNumbers.map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`weekNumber-${option}`}
+                    value={option}
+                    checked={draftFilters.weekNumbers.includes(option)}
+                    onCheckedChange={(checked) => handleWeekNumberChange(option, !!checked)}
+                  />
+                  <Label htmlFor={`weekNumber-${option}`} className="font-normal">
+                    {`第 ${option} 周`}
+                  </Label>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
 
           <AccordionItem value="regions">
             <AccordionTrigger>{dimensionLabels['regions']}</AccordionTrigger>
@@ -253,6 +278,25 @@ export function FilterSidebar() {
                     onCheckedChange={(checked) => handleRegionChange(option, !!checked)}
                   />
                   <Label htmlFor={`region-${option}`} className="font-normal">
+                    {option}
+                  </Label>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="businessTypes">
+            <AccordionTrigger>{dimensionLabels['businessTypes']}</AccordionTrigger>
+            <AccordionContent className="space-y-2 pt-2">
+              {filterOptions.businessTypes.map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`businessType-${option}`}
+                    value={option}
+                    checked={draftFilters.businessTypes.includes(option)}
+                    onCheckedChange={(checked) => handleBusinessTypeChange(option, !!checked)}
+                  />
+                  <Label htmlFor={`businessType-${option}`} className="font-normal">
                     {option}
                   </Label>
                 </div>
@@ -278,19 +322,19 @@ export function FilterSidebar() {
               ))}
             </AccordionContent>
           </AccordionItem>
-          
-          <AccordionItem value="businessTypes">
-            <AccordionTrigger>{dimensionLabels['businessTypes']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2">
-              {filterOptions.businessTypes.map((option) => (
+
+          <AccordionItem value="coverageTypes">
+            <AccordionTrigger>{dimensionLabels['coverageTypes']}</AccordionTrigger>
+            <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
+              {filterOptions.coverageTypes.map((option) => (
                 <div key={option} className="flex items-center space-x-2">
                   <Checkbox
-                    id={`businessType-${option}`}
+                    id={`coverageType-${option}`}
                     value={option}
-                    checked={draftFilters.businessTypes.includes(option)}
-                    onCheckedChange={(checked) => handleBusinessTypeChange(option, !!checked)}
+                    checked={draftFilters.coverageTypes.includes(option)}
+                    onCheckedChange={(checked) => handleCoverageTypeChange(option, !!checked)}
                   />
-                  <Label htmlFor={`businessType-${option}`} className="font-normal">
+                  <Label htmlFor={`coverageType-${option}`} className="font-normal">
                     {option}
                   </Label>
                 </div>
@@ -317,25 +361,6 @@ export function FilterSidebar() {
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="weekNumbers">
-            <AccordionTrigger>{dimensionLabels['weekNumbers']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
-              {filterOptions.weekNumbers.map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`weekNumber-${option}`}
-                    value={option}
-                    checked={draftFilters.weekNumbers.includes(option)}
-                    onCheckedChange={(checked) => handleWeekNumberChange(option, !!checked)}
-                  />
-                  <Label htmlFor={`weekNumber-${option}`} className="font-normal">
-                    {`第 ${option} 周`}
-                  </Label>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-
           <AccordionItem value="transferredStatus">
             <AccordionTrigger>{dimensionLabels['transferredStatus']}</AccordionTrigger>
             <AccordionContent className="space-y-2 pt-2">
@@ -348,25 +373,6 @@ export function FilterSidebar() {
                     onCheckedChange={(checked) => handleTransferredStatusChange(option, !!checked)}
                   />
                   <Label htmlFor={`transferredStatus-${option}`} className="font-normal">
-                    {option}
-                  </Label>
-                </div>
-              ))}
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="coverageTypes">
-            <AccordionTrigger>{dimensionLabels['coverageTypes']}</AccordionTrigger>
-            <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
-              {filterOptions.coverageTypes.map((option) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`coverageType-${option}`}
-                    value={option}
-                    checked={draftFilters.coverageTypes.includes(option)}
-                    onCheckedChange={(checked) => handleCoverageTypeChange(option, !!checked)}
-                  />
-                  <Label htmlFor={`coverageType-${option}`} className="font-normal">
                     {option}
                   </Label>
                 </div>
