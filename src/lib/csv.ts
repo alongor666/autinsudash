@@ -46,6 +46,24 @@ const NUMERIC_FIELDS = [
   'week_number'
 ];
 
+/**
+ * A robust float parser that removes currency symbols and thousand separators.
+ * @param value The string value to parse.
+ * @returns A floating point number or null if parsing is not possible.
+ */
+function parseRobustFloat(value: string): number | null {
+    if (typeof value !== 'string' || value.trim() === '') {
+        return null;
+    }
+    // Remove common currency symbols and thousand separators, but keep the decimal point.
+    const cleanedValue = value.replace(/[^0-9.-]+/g, "");
+    if (cleanedValue === '') {
+        return null;
+    }
+    const num = parseFloat(cleanedValue);
+    return isNaN(num) ? null : num;
+}
+
 
 export function parseCSV(file: File): Promise<RawDataRow[]> {
   return new Promise((resolve, reject) => {
@@ -68,20 +86,25 @@ export function parseCSV(file: File): Promise<RawDataRow[]> {
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',');
         const rowObject: any = {};
+        let skipRow = false;
         for (let j = 0; j < header.length; j++) {
             const key = header[j];
             let value: string | number | null = values[j];
 
             if (NUMERIC_FIELDS.includes(key)) {
-                value = value === '' ? null : parseFloat(value);
-                 if (value !== null && isNaN(value)) {
-                    // Skip row if a numeric field is invalid, and log an error
-                    console.warn(`Invalid numeric value at row ${i+1}, column ${key}. Skipping row.`);
-                    continue; // to next line
+                value = parseRobustFloat(value as string);
+                if (value === null && key !== 'large_truck_score' && key !== 'small_truck_score') {
+                    // Log a warning for unexpected nulls in critical numeric fields.
+                    console.warn(`Invalid or empty numeric value at row ${i+1}, column ${key}. Skipping row.`);
+                    skipRow = true;
+                    break;
                 }
             }
             rowObject[key] = value;
         }
+
+        if (skipRow) continue;
+
          // Ensure all required fields are present after parsing the row
         if (header.length === Object.keys(rowObject).length) {
             data.push(rowObject as RawDataRow);
