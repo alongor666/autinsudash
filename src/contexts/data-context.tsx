@@ -55,10 +55,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [filters, rawData]);
 
    useEffect(() => {
-    if (rawData.length > 0 && !filters.year) {
-      setFilters(f => ({ ...f, year: filterOptions.years[0] }));
+    if (rawData.length > 0 && filterOptions.years.length > 0) {
+      const latestYear = filterOptions.years[0];
+      // Set the year filter to the latest year only if it's not already set
+      // or if the current selection is no longer valid.
+      if (filters.year !== latestYear) {
+         setFilters(f => ({ ...f, year: latestYear, regions: [], insuranceTypes: [] }));
+      }
     }
-  }, [rawData, filterOptions.years, filters.year]);
+  }, [rawData, filterOptions.years]); // Removed filters.year to avoid loop
 
   const value = {
     rawData,
