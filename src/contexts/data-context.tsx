@@ -4,9 +4,7 @@ import React, { createContext, useContext, useState, ReactNode, useMemo, useEffe
 import { RawDataRow, Filters, FilterOptions, KPIKey, Kpi, ChartDataPoint } from '@/lib/types';
 import { kpiData as defaultKpiData, filterOptions as defaultFilterOptions } from '@/lib/data';
 import { calculateKPIs, aggregateChartData } from '@/lib/utils';
-
-// Define a key for localStorage
-const LOCAL_STORAGE_KEY = 'carInsuranceDashboardData';
+import { storeData, getData } from '@/lib/idb';
 
 interface DataContextType {
   rawData: RawDataRow[];
@@ -41,29 +39,30 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [highlightedKpis, setHighlightedKpis] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load data from localStorage on initial mount
+  // Load data from IndexedDB on initial mount
   useEffect(() => {
-    try {
-      const item = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (item) {
-        const parsedData = JSON.parse(item);
-        if (Array.isArray(parsedData)) {
-           setRawDataState(parsedData);
+    async function loadData() {
+      try {
+        const data = await getData();
+        if (data && Array.isArray(data)) {
+           setRawDataState(data);
         }
+      } catch (error) {
+        console.error("Failed to load data from IndexedDB", error);
       }
-    } catch (error) {
-      console.error("Failed to load data from localStorage", error);
+      setIsInitialized(true);
     }
-    setIsInitialized(true);
+    loadData();
   }, []);
 
   const setRawData = (data: RawDataRow[]) => {
-    try {
-      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
-    } catch (error) {
-      console.error("Failed to save data to localStorage", error);
-    }
-    setRawDataState(data);
+    storeData(data)
+      .then(() => {
+        setRawDataState(data);
+      })
+      .catch((error) => {
+        console.error("Failed to save data to IndexedDB", error);
+      });
   };
 
 
