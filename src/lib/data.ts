@@ -49,10 +49,10 @@ export const filterOptions: FilterOptions = {
 export const businessTypeAliases: BusinessTypeAlias[] = [
     {
         name: '货车',
-        description: '包含所有货车相关类型',
+        description: '选择所有类型为货车或牵引车的业务',
         matchFunction: (selected, all) => {
-            const allTrucks = all.filter(t => t.includes('货车'));
-            const selectedTrucks = Array.from(selected).filter(t => t.includes('货车'));
+            const allTrucks = all.filter(t => t.includes('货') || t.includes('牵引'));
+            const selectedTrucks = Array.from(selected).filter(t => t.includes('货') || t.includes('牵引'));
             return allTrucks.length > 0 && selectedTrucks.length === allTrucks.length && selected.size === allTrucks.length;
         }
     },
@@ -68,10 +68,10 @@ export const businessTypeAliases: BusinessTypeAlias[] = [
     },
     {
         name: '营业货车',
-        description: '包含所有“营业”属性的货车类型',
+        description: '选择所有类型为营业性质的货车',
         matchFunction: (selected, all) => {
-             const allCommercialTrucks = all.filter(t => t.includes('营业') && t.includes('货车'));
-             const selectedCommercialTrucks = Array.from(selected).filter(t => t.includes('营业') && t.includes('货车'));
+             const allCommercialTrucks = all.filter(t => (t.includes('货') || t.includes('牵引')) && t.includes('营业'));
+             const selectedCommercialTrucks = Array.from(selected).filter(t => (t.includes('货') || t.includes('牵引')) && t.includes('营业'));
              return allCommercialTrucks.length > 0 && selectedCommercialTrucks.length === allCommercialTrucks.length && selected.size === allCommercialTrucks.length;
         }
     },

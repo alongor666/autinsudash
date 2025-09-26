@@ -16,7 +16,11 @@ import type { Filters } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { businessTypeAliases } from '@/lib/data';
 
-export function TopFilters() {
+interface TopFiltersProps {
+  onApply: () => void;
+}
+
+export function TopFilters({ onApply }: TopFiltersProps) {
   const { filterOptions, filters, setFilters } = useData();
   const [draftFilters, setDraftFilters] = useState<Filters>(filters);
   const { toast } = useToast();
@@ -43,25 +47,27 @@ export function TopFilters() {
 
     const allTypes = filterOptions.businessTypes;
     let newSelection: string[] = [];
-
-    if (alias.name === '不含摩托车') {
-      newSelection = allTypes.filter(t => t !== '摩托车');
-    } else if (alias.name === '货车') {
-      newSelection = allTypes.filter(t => t.includes('货车'));
-    } else if (alias.name === '营业货车') {
-      newSelection = allTypes.filter(t => t.includes('营业') && t.includes('货车'));
+    
+    // Updated logic to be more specific
+    if (alias.name === '货车') {
+      newSelection = allTypes.filter(t => t.includes('货') || t.includes('牵引'));
     } else if (alias.name === '大货车') {
         newSelection = ['9吨及以上货车'];
     } else if (alias.name === '小货车') {
         newSelection = ['2吨及以下货车'];
+    } else if (alias.name === '营业货车') {
+      newSelection = allTypes.filter(t => (t.includes('货') || t.includes('牵引')) && t.includes('营业'));
     } else if (alias.name === '非营业客车') {
         newSelection = ['非营业客车'];
     } else if (alias.name === '家自车') {
         newSelection = ['非营业个人'];
+    } else if (alias.name === '不含摩托车') {
+      newSelection = allTypes.filter(t => t !== '摩托车');
     }
     
     setDraftFilters(prev => ({ ...prev, businessTypes: newSelection }));
   };
+
 
   const applyFilters = () => {
     setFilters(draftFilters);
@@ -69,6 +75,7 @@ export function TopFilters() {
       title: '筛选已应用',
       description: '仪表板已根据您的选择更新。',
     });
+    onApply();
   };
 
   const resetFilters = () => {
@@ -83,26 +90,21 @@ export function TopFilters() {
         coverageTypes: [],
     };
     setDraftFilters(initialFilters);
-    setFilters(initialFilters);
-    toast({
-      title: '筛选已重置',
-      description: '已恢复到默认筛选条件。',
-    });
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-background">
       <div className="flex items-center justify-between border-b p-4">
         <h3 className="text-lg font-semibold">智能筛选</h3>
         <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={resetFilters}>重置</Button>
-            <Button size="sm" onClick={applyFilters}>应用</Button>
+            <Button size="sm" onClick={applyFilters}>应用筛选</Button>
         </div>
       </div>
       <ScrollArea className="flex-1">
-        <div className="grid grid-cols-2 gap-4 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
           {/* Column 1: Short lists */}
-          <div className="space-y-4">
+          <div className="space-y-6 flex flex-col">
             <div className="space-y-2">
               <Label>保单年度</Label>
               <Select onValueChange={(v) => handleSingleSelectChange('year', v)} value={draftFilters.year || 'all'}>
@@ -136,6 +138,17 @@ export function TopFilters() {
               ))}
               </div>
             </div>
+            <div className="space-y-2">
+              <Label>险别组合</Label>
+                <ScrollArea className="h-32 rounded-md border p-2">
+                {(filterOptions.coverageTypes || []).map((option) => (
+                    <div key={option} className="flex items-center space-x-2 p-1">
+                    <Checkbox id={`ct-${option}`} checked={(draftFilters.coverageTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('coverageTypes', option, !!c)} />
+                    <Label htmlFor={`ct-${option}`} className="font-normal">{option}</Label>
+                    </div>
+                ))}
+                </ScrollArea>
+            </div>
              <div className="space-y-2">
               <Label>是否新能源</Label>
                <div className="flex flex-col space-y-2 pt-1">
@@ -159,62 +172,44 @@ export function TopFilters() {
               </div>
             </div>
           </div>
-          {/* Column 2: Long lists */}
-          <div className="space-y-4">
-             <div className="space-y-2">
-                <Label>三级机构</Label>
-                <ScrollArea className="h-40 rounded-md border">
-                    <div className="p-2">
-                    <div key="all-regions" className="flex items-center space-x-2 p-1">
-                      <Checkbox id="region-all" 
-                        checked={!draftFilters.region} 
-                        onCheckedChange={(c) => { if(c) handleSingleSelectChange('region', 'all')}}/>
-                      <Label htmlFor="region-all" className="font-normal">全部机构</Label>
-                    </div>
-                    {(filterOptions.regions || []).map((option) => (
-                        <div key={option} className="flex items-center space-x-2 p-1">
-                        <Checkbox id={`region-${option}`} 
-                            checked={draftFilters.region === option} 
-                            onCheckedChange={(c) => {if(c) handleSingleSelectChange('region', option)}} />
-                        <Label htmlFor={`region-${option}`} className="font-normal">{option}</Label>
-                        </div>
-                    ))}
-                    </div>
-                </ScrollArea>
-            </div>
+          {/* Column 2: Regions */}
+          <div className="space-y-2 flex flex-col">
+             <Label>三级机构</Label>
+             <ScrollArea className="flex-1 rounded-md border">
+                 <div className="p-2">
+                 {(filterOptions.regions || []).map((option) => (
+                     <div key={option} className="flex items-center space-x-2 p-1">
+                     <Checkbox id={`region-${option}`} 
+                         checked={(draftFilters.region || []).includes(option)} 
+                         onCheckedChange={(c) => handleMultiSelectChange('region', option, !!c)} />
+                     <Label htmlFor={`region-${option}`} className="font-normal">{option}</Label>
+                     </div>
+                 ))}
+                 </div>
+             </ScrollArea>
+           </div>
+          {/* Column 3: Business Types */}
+          <div className="space-y-2 flex flex-col">
+            <Label>业务类型</Label>
             <div className="space-y-2">
-              <Label>业务类型</Label>
-              <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">智能切片</p>
                 <div className="flex flex-wrap gap-2">
-                  {businessTypeAliases.map(alias => (
+                    {businessTypeAliases.map(alias => (
                     <Button key={alias.name} variant="outline" size="sm" onClick={() => handleBusinessTypeAliasClick(alias.name)}>
-                      {alias.name}
+                        {alias.name}
                     </Button>
-                  ))}
+                    ))}
                 </div>
-              </div>
-              <ScrollArea className="h-60 rounded-md border p-2">
-                {(filterOptions.businessTypes || []).map((option) => (
-                    <div key={option} className="flex items-center space-x-2 p-1">
-                    <Checkbox id={`bt-${option}`} checked={(draftFilters.businessTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('businessTypes', option, !!c)} />
-                    <Label htmlFor={`bt-${option}`} className="font-normal">{option}</Label>
-                    </div>
-                ))}
-              </ScrollArea>
             </div>
-          </div>
-        </div>
-        <div className="space-y-2 px-4 pb-4">
-            <Label>险别组合</Label>
-            <ScrollArea className="h-32 rounded-md border p-2">
-            {(filterOptions.coverageTypes || []).map((option) => (
+            <ScrollArea className="flex-1 rounded-md border p-2">
+            {(filterOptions.businessTypes || []).map((option) => (
                 <div key={option} className="flex items-center space-x-2 p-1">
-                <Checkbox id={`ct-${option}`} checked={(draftFilters.coverageTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('coverageTypes', option, !!c)} />
-                <Label htmlFor={`ct-${option}`} className="font-normal">{option}</Label>
+                <Checkbox id={`bt-${option}`} checked={(draftFilters.businessTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('businessTypes', option, !!c)} />
+                <Label htmlFor={`bt-${option}`} className="font-normal">{option}</Label>
                 </div>
             ))}
             </ScrollArea>
+          </div>
         </div>
       </ScrollArea>
     </div>
