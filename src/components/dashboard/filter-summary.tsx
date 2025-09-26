@@ -68,6 +68,6 @@ export function FilterSummaryTitle() {
   }, [filters]);
 
   return (
-      <h2 className="text-2xl font-semibold flex-grow text-center">{summary}</h2>
+      <h2 className="text-2xl font-semibold text-center flex-grow">{summary}</h2>
   );
 }
