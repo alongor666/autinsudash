@@ -190,22 +190,21 @@ export function TopFilters() {
       <PopoverContent className="w-96">
         <div className="grid gap-4">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium leading-none">智能筛选</h4>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={resetDraft}>重置</Button>
-              <Button onClick={applyAllFilters}>应用筛选</Button>
+               <Button variant="ghost" onClick={resetDraft}>重置</Button>
+               <Button onClick={applyAllFilters}>应用筛选</Button>
             </div>
           </div>
           <Separator />
 
           <Accordion type="multiple" className="w-full" defaultValue={['ai-search', 'manual-filters']}>
             <AccordionItem value="ai-search">
-              <AccordionTrigger>智能洞察</AccordionTrigger>
+              <AccordionTrigger>智能输入</AccordionTrigger>
               <AccordionContent className="space-y-4 pt-2">
                 <div className="relative">
                   <Input
                     type="search"
-                    placeholder="输入“成都”、“新车”后回车获取建议..."
+                    placeholder="输入筛选维度一键运用"
                     className="pr-8"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
