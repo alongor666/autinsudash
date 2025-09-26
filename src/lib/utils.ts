@@ -8,13 +8,13 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(value: number, unit: 'yuan' | 'ten_thousand' = 'ten_thousand') {
-  const valueInYuan = unit === 'yuan' ? value : value / 10000;
+  const valueInUnit = unit === 'yuan' ? value : value / 10000;
   return new Intl.NumberFormat('zh-CN', {
     style: 'currency',
     currency: 'CNY',
-    minimumFractionDigits: unit === 'yuan' ? 0 : 2,
-    maximumFractionDigits: unit === 'yuan' ? 0 : 2,
-  }).format(valueInYuan).replace('¥', '¥ ');
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(valueInUnit).replace('¥', '¥ ');
 }
 
 export function formatPercentage(value: number) {
@@ -42,25 +42,32 @@ function calculateMetrics(data: RawDataRow[]) {
 
 
 export function calculateKPIs(currentData: RawDataRow[], previousData: RawDataRow[]): { [key in KPIKey]: Omit<Kpi, 'title' | 'id'> } {
+  if (!currentData || currentData.length === 0) {
+    return defaultKpiData;
+  }
+    
   const currentMetrics = calculateMetrics(currentData);
   const previousMetrics = calculateMetrics(previousData);
 
   const getChange = (current: number, previous: number) => {
     if (previous === 0) {
-      return current > 0 ? 1 : 0; // 100% increase if previous is 0 and current is positive
+      return current > 0 ? 1 : (current < 0 ? -1 : 0);
     }
-    return (current - previous) / previous;
+    return (current - previous) / Math.abs(previous);
   };
   
   const formatChange = (change: number) => {
     const sign = change > 0 ? '+' : '';
-    return `${sign}${(change * 100).toFixed(1)}%`;
+    if (isFinite(change)) {
+        return `${sign}${(change * 100).toFixed(1)}%`;
+    }
+    return 'N/A';
   };
 
   const signedPremiumChange = getChange(currentMetrics.signedPremium, previousMetrics.signedPremium);
-  const maturedLossRatioChange = currentMetrics.maturedLossRatio - previousMetrics.maturedLossRatio;
-  const expenseRatioChange = currentMetrics.expenseRatio - previousMetrics.expenseRatio;
-  const maturedMarginalContributionRateChange = currentMetrics.maturedMarginalContributionRate - previousMetrics.maturedMarginalContributionRate;
+  const maturedLossRatioChange = currentMetrics.maturedLossRatio - previousMetrics.maturedLossRatio; // Rate change is absolute
+  const expenseRatioChange = currentMetrics.expenseRatio - previousMetrics.expenseRatio; // Rate change is absolute
+  const maturedMarginalContributionRateChange = currentMetrics.maturedMarginalContributionRate - previousMetrics.maturedMarginalContributionRate; // Rate change is absolute
 
 
   return {
@@ -72,19 +79,19 @@ export function calculateKPIs(currentData: RawDataRow[], previousData: RawDataRo
     },
     maturedLossRatio: {
       value: formatPercentage(currentMetrics.maturedLossRatio),
-      change: formatChange(maturedLossRatioChange),
+      change: `${(maturedLossRatioChange * 100).toFixed(2)}pp`,
       changeType: maturedLossRatioChange >= 0 ? 'increase' : 'decrease',
       description: '较上周',
     },
     expenseRatio: {
       value: formatPercentage(currentMetrics.expenseRatio),
-      change: formatChange(expenseRatioChange),
+      change: `${(expenseRatioChange * 100).toFixed(2)}pp`,
       changeType: expenseRatioChange >= 0 ? 'increase' : 'decrease',
       description: '较上周',
     },
     maturedMarginalContributionRate: {
       value: formatPercentage(currentMetrics.maturedMarginalContributionRate),
-      change: formatChange(maturedMarginalContributionRateChange),
+      change: `${(maturedMarginalContributionRateChange * 100).toFixed(2)}pp`,
       changeType: maturedMarginalContributionRateChange >= 0 ? 'increase' : 'decrease',
       description: '较上周',
     },
