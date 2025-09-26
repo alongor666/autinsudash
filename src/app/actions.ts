@@ -24,6 +24,16 @@ export async function getPredictiveSuggestions(input: PredictiveFilterSuggestion
 
 export async function generateFilterSummaryAction(filters: Filters): Promise<string> {
     try {
+        const activeFilters = Object.entries(filters).filter(([, value]) => {
+            if (Array.isArray(value)) {
+              return value.length > 0;
+            }
+            return value !== null && value !== undefined && value !== '';
+        });
+
+        if (activeFilters.length === 0) {
+            return '全量数据经营概况';
+        }
         return await generateFilterSummary(filters);
     } catch (error) {
         console.error("Error generating filter summary:", error);

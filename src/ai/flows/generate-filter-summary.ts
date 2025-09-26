@@ -31,17 +31,6 @@ export type GenerateFilterSummaryOutput = z.infer<typeof GenerateFilterSummaryOu
 
 
 export async function generateFilterSummary(input: Filters): Promise<GenerateFilterSummaryOutput> {
-  const activeFilters = Object.entries(input).filter(([, value]) => {
-    if (Array.isArray(value)) {
-      return value.length > 0;
-    }
-    return value !== null && value !== undefined && value !== '';
-  });
-
-  if (activeFilters.length === 0) {
-    return '全量数据经营概况';
-  }
-  
   return generateFilterSummaryFlow(input);
 }
 
@@ -57,10 +46,10 @@ Your task is to generate a summary string following this exact format: "[三级�
 IMPORTANT RULES:
 1.  If a filter is not present or is an empty array, its corresponding part in the title (including connecting words like "年保单", "第...周") MUST be omitted.
 2.  If multiple values exist for a filter (like businessTypes), combine them with a "、" character.
-3.  If no filters are applied at all, the summary MUST be "全量数据经营概况".
+3.  If no filters are applied at all (input is empty or all values are null/empty), the summary MUST be "全量数据经营概况".
 4.  Do not add any extra words, explanations, or labels like "当前筛选：". Only return the generated summary string.
 
-Here are some examples:
+Here are some examples to follow strictly:
 - Input: { year: '2024', region: '天府', businessTypes: null, weekNumber: null }
   Output: 天府2024年经营概况
 - Input: { year: '2024', region: '天府', businessTypes: ['新车'], weekNumber: '38' }
@@ -89,6 +78,17 @@ const generateFilterSummaryFlow = ai.defineFlow(
     outputSchema: GenerateFilterSummaryOutputSchema,
   },
   async (input) => {
+    const activeFilters = Object.entries(input).filter(([, value]) => {
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        return value !== null && value !== undefined && value !== '';
+    });
+
+    if (activeFilters.length === 0) {
+        return '全量数据经营概况';
+    }
+
     const { output } = await generateFilterSummaryPrompt(input);
     return output!;
   }

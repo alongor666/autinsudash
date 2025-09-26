@@ -66,10 +66,12 @@ Based on the user's input, search through the available filter options and sugge
 
 For example, if the user types "成都", and "成都" is in the list of options, you should identify that "成都" belongs to the 'third_level_organization' dimension and return { dimension: 'third_level_organization', value: '成都' }.
 If the user types "新", you might suggest { dimension: 'business_type_category', value: '新车' } and { dimension: 'is_new_energy_vehicle', value: '是' }.
+If the user types "2023", you should suggest { dimension: 'policy_start_year', value: '2023' }.
+
 
 Also, identify which KPIs are likely to be most affected or important to watch based on the suggested filters.
 
-Only return suggestions from the provided lists of available filters and KPIs. Return up to 5 filter suggestions.
+Only return suggestions from the provided lists of available filters and KPIs. Return up to 3 relevant filter suggestions.
 Your response must be in JSON format.
 `,
 });

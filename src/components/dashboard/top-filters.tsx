@@ -52,13 +52,14 @@ export function TopFilters() {
     }
 
     setIsSearching(true);
+    setSuggestedFilters([]);
     try {
-      const availableFilters = Object.values(filterOptions).flat();
+      const allOptions = Object.values(filterOptions).flat();
       const historicalUserBehavior = "用户经常在查看'北京'地区的'商业险'后，关注'赔付率'和'承保利润率'。";
       
       const result = await getPredictiveSuggestions({
         searchInput: searchInput,
-        availableFilters,
+        availableFilters: allOptions,
         kpiList: kpiListForAI,
         historicalUserBehavior,
       });
@@ -92,6 +93,22 @@ export function TopFilters() {
       : currentValues.filter((v) => v !== value);
     setDraftFilters(prev => ({ ...prev, [dimension]: newValues }));
   };
+
+  const handleBusinessTypeControls = (action: 'all' | 'none' | 'invert') => {
+    const allBusinessTypes = filterOptions.businessTypes || [];
+    const currentSelection = draftFilters.businessTypes || [];
+    let newSelection: string[] = [];
+
+    if (action === 'all') {
+      newSelection = allBusinessTypes;
+    } else if (action === 'none') {
+      newSelection = [];
+    } else if (action === 'invert') {
+      newSelection = allBusinessTypes.filter(bt => !currentSelection.includes(bt));
+    }
+
+    setDraftFilters(prev => ({ ...prev, businessTypes: newSelection }));
+  };
   
   const addAiFilter = (filter: SuggestedFilter) => {
     if (!aiDraftFilters.some(f => f.dimension === filter.dimension && f.value === filter.value)) {
@@ -113,29 +130,36 @@ export function TopFilters() {
         case 'third_level_organization':
             combinedFilters.region = value;
             break;
+        case 'policy_start_year':
+            combinedFilters.year = value;
+            break;
+        case 'week_number':
+            combinedFilters.weekNumber = value;
+            break;
         case 'business_type_category':
-            combinedFilters.businessTypes = [...(combinedFilters.businessTypes || []), value];
+            combinedFilters.businessTypes = [...new Set([...(combinedFilters.businessTypes || []), value])];
             break;
         case 'insurance_type':
-            combinedFilters.insuranceTypes = [...(combinedFilters.insuranceTypes || []), value];
+            combinedFilters.insuranceTypes = [...new Set([...(combinedFilters.insuranceTypes || []), value])];
             break;
         case 'is_new_energy_vehicle':
-            combinedFilters.newEnergyStatus = [...(combinedFilters.newEnergyStatus || []), value];
+            combinedFilters.newEnergyStatus = [...new Set([...(combinedFilters.newEnergyStatus || []), value])];
             break;
-        // Extend with other dimensions as needed
+        case 'is_transferred_vehicle':
+            combinedFilters.transferredStatus = [...new Set([...(combinedFilters.transferredStatus || []), value])];
+            break;
+        case 'coverage_type':
+            combinedFilters.coverageTypes = [...new Set([...(combinedFilters.coverageTypes || []), value])];
+            break;
       }
     });
-    
-    // Ensure uniqueness for multi-selects just in case
-    if (combinedFilters.businessTypes) combinedFilters.businessTypes = [...new Set(combinedFilters.businessTypes)];
-    if (combinedFilters.insuranceTypes) combinedFilters.insuranceTypes = [...new Set(combinedFilters.insuranceTypes)];
-    if (combinedFilters.newEnergyStatus) combinedFilters.newEnergyStatus = [...new Set(combinedFilters.newEnergyStatus)];
 
     setFilters(combinedFilters);
     setIsPopoverOpen(false);
     setAiDraftFilters([]);
     setSearchInput('');
     setSuggestedFilters([]);
+    setHighlightedKpis([]);
     toast({
       title: '筛选已应用',
       description: '仪表板已根据您的选择更新。',
@@ -145,6 +169,9 @@ export function TopFilters() {
   const resetDraft = () => {
     setDraftFilters(filters);
     setAiDraftFilters([]);
+    setSearchInput('');
+    setSuggestedFilters([]);
+    setHighlightedKpis([]);
     toast({
       title: '重置成功',
       description: '筛选条件已恢复。',
@@ -163,9 +190,9 @@ export function TopFilters() {
       <PopoverContent className="w-96">
         <div className="grid gap-4">
           <div className="space-y-2">
-            <h4 className="font-medium leading-none">智能筛选</h4>
+            <h4 className="font-medium leading-none">智能筛选与配置</h4>
             <p className="text-sm text-muted-foreground">
-              在这里手动配置或使用智能洞察。
+              使用AI洞察或手动配置筛选维度。
             </p>
           </div>
           
@@ -175,14 +202,14 @@ export function TopFilters() {
           </div>
           <Separator />
 
-          <Accordion type="multiple" className="w-full">
+          <Accordion type="multiple" className="w-full" defaultValue={['ai-search', 'manual-filters']}>
             <AccordionItem value="ai-search">
               <AccordionTrigger>智能洞察</AccordionTrigger>
               <AccordionContent className="space-y-4 pt-2">
                 <div className="relative">
                   <Input
                     type="search"
-                    placeholder="输入“成都”、“新车”等获取智能建议..."
+                    placeholder="输入“成都”、“新车”后回车获取建议..."
                     className="pr-8"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
@@ -205,9 +232,9 @@ export function TopFilters() {
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">筛选建议:</Label>
                     <div className="flex flex-wrap gap-1">
-                      {suggestedFilters.map(filter => (
+                      {suggestedFilters.map((filter, index) => (
                         <Button
-                          key={`${filter.dimension}-${filter.value}`}
+                          key={`${filter.dimension}-${filter.value}-${index}`}
                           variant="outline"
                           size="sm"
                           className="h-7 text-xs"
@@ -223,8 +250,8 @@ export function TopFilters() {
                   <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">已选智能筛选:</Label>
                       <div className="flex flex-wrap gap-1">
-                        {aiDraftFilters.map(filter => (
-                            <Badge key={`${filter.dimension}-${filter.value}`} variant="secondary" className="flex items-center gap-1">
+                        {aiDraftFilters.map((filter, index) => (
+                            <Badge key={`${filter.dimension}-${filter.value}-${index}`} variant="secondary" className="flex items-center gap-1">
                                 {filter.value}
                                 <button onClick={() => removeAiFilter(filter)} className="rounded-full hover:bg-muted-foreground/20">
                                     <X className="h-3 w-3"/>
@@ -236,8 +263,8 @@ export function TopFilters() {
                 )}
               </AccordionContent>
             </AccordionItem>
-              <AccordionItem value="common">
-                <AccordionTrigger>常规筛选</AccordionTrigger>
+              <AccordionItem value="manual-filters">
+                <AccordionTrigger>手动筛选</AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-2">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -273,6 +300,11 @@ export function TopFilters() {
                   </div>
                    <div className="space-y-2">
                       <Label>业务类型</Label>
+                       <div className="flex items-center gap-2 mb-2">
+                         <Button variant="link" className="p-0 h-auto text-xs" onClick={() => handleBusinessTypeControls('all')}>全选</Button>
+                         <Button variant="link" className="p-0 h-auto text-xs" onClick={() => handleBusinessTypeControls('none')}>清空</Button>
+                         <Button variant="link" className="p-0 h-auto text-xs" onClick={() => handleBusinessTypeControls('invert')}>反选</Button>
+                       </div>
                       <ScrollArea className="h-24 rounded-md border p-2">
                       {(filterOptions.businessTypes || []).map((option) => (
                           <div key={option} className="flex items-center space-x-2 p-1">
@@ -282,12 +314,7 @@ export function TopFilters() {
                       ))}
                       </ScrollArea>
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="advanced">
-                  <AccordionTrigger>更多筛选</AccordionTrigger>
-                  <AccordionContent className="space-y-4 pt-2">
-                     <div className="space-y-2">
+                   <div className="space-y-2">
                       <Label>车险种类</Label>
                       <div className="flex items-center space-x-4">
                       {(filterOptions.insuranceTypes || []).map((option) => (
@@ -331,7 +358,7 @@ export function TopFilters() {
                       ))}
                       </ScrollArea>
                     </div>
-                  </AccordionContent>
+                </AccordionContent>
               </AccordionItem>
           </Accordion>
         </div>
