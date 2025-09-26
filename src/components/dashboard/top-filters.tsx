@@ -40,14 +40,16 @@ export function TopFilters({ onApply }: TopFiltersProps) {
       ? [...currentValues, value]
       : currentValues.filter((v) => v !== value);
 
-    // If both options are selected or no option is selected, treat as "all" (null)
     const allOptionsForDimension = filterOptions[dimension as keyof typeof filterOptions] as string[];
-    if (newValues.length === 0 || newValues.length === allOptionsForDimension?.length) {
+    
+    // If all options are selected, treat as "all" (null)
+    if (newValues.length === allOptionsForDimension?.length) {
       setDraftFilters(prev => ({ ...prev, [dimension]: null }));
     } else {
       setDraftFilters(prev => ({ ...prev, [dimension]: newValues }));
     }
   };
+
 
   const handleBusinessTypeAliasClick = (aliasName: string) => {
     const alias = businessTypeAliases.find(a => a.name === aliasName);
@@ -147,7 +149,7 @@ export function TopFilters({ onApply }: TopFiltersProps) {
               <div className="flex items-center space-x-4 pt-1">
                 {(filterOptions.insuranceTypes || []).map((option) => (
                     <div key={option} className="flex items-center space-x-2">
-                    <Checkbox id={`it-${option}`} checked={(draftFilters.insuranceTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('insuranceTypes', option, !!c)} />
+                    <Checkbox id={`it-${option}`} checked={draftFilters.insuranceTypes === null || draftFilters.insuranceTypes.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('insuranceTypes', option, !!c)} />
                     <Label htmlFor={`it-${option}`} className="font-normal">{binaryOptionMap[option] || option}</Label>
                     </div>
                 ))}
@@ -158,7 +160,7 @@ export function TopFilters({ onApply }: TopFiltersProps) {
               <div className="flex items-center space-x-4 pt-1">
                 {(filterOptions.newEnergyStatus || []).map((option) => (
                   <div key={option} className="flex items-center space-x-2">
-                    <Checkbox id={`nes-${option}`} checked={(draftFilters.newEnergyStatus || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('newEnergyStatus', option, !!c)} />
+                    <Checkbox id={`nes-${option}`} checked={draftFilters.newEnergyStatus === null || draftFilters.newEnergyStatus.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('newEnergyStatus', option, !!c)} />
                     <Label htmlFor={`nes-${option}`} className="font-normal">{option}</Label>
                   </div>
                 ))}
@@ -169,7 +171,7 @@ export function TopFilters({ onApply }: TopFiltersProps) {
               <div className="flex items-center space-x-4 pt-1">
                 {(filterOptions.transferredStatus || []).map((option) => (
                   <div key={option} className="flex items-center space-x-2">
-                    <Checkbox id={`ts-${option}`} checked={(draftFilters.transferredStatus || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('transferredStatus', option, !!c)} />
+                    <Checkbox id={`ts-${option}`} checked={draftFilters.transferredStatus === null || draftFilters.transferredStatus.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('transferredStatus', option, !!c)} />
                     <Label htmlFor={`ts-${option}`} className="font-normal">{option === '是' ? '过户' : '非过户'}</Label>
                   </div>
                 ))}
@@ -180,7 +182,7 @@ export function TopFilters({ onApply }: TopFiltersProps) {
                 <ScrollArea className="flex-1 h-32 rounded-md border p-2">
                 {(filterOptions.coverageTypes || []).map((option) => (
                     <div key={option} className="flex items-center space-x-2 p-1">
-                    <Checkbox id={`ct-${option}`} checked={(draftFilters.coverageTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('coverageTypes', option, !!c)} />
+                    <Checkbox id={`ct-${option}`} checked={draftFilters.coverageTypes === null || draftFilters.coverageTypes.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('coverageTypes', option, !!c)} />
                     <Label htmlFor={`ct-${option}`} className="font-normal">{option}</Label>
                     </div>
                 ))}
@@ -195,7 +197,7 @@ export function TopFilters({ onApply }: TopFiltersProps) {
                  {(filterOptions.regions || []).map((option) => (
                      <div key={option} className="flex items-center space-x-2 p-1">
                      <Checkbox id={`region-${option}`} 
-                         checked={(draftFilters.region || []).includes(option)} 
+                         checked={draftFilters.region === null || draftFilters.region.includes(option)} 
                          onCheckedChange={(c) => handleMultiSelectChange('region', option, !!c)} />
                      <Label htmlFor={`region-${option}`} className="font-normal">{option}</Label>
                      </div>
@@ -219,7 +221,7 @@ export function TopFilters({ onApply }: TopFiltersProps) {
             <ScrollArea className="flex-1 rounded-md border p-2">
             {(filterOptions.businessTypes || []).map((option) => (
                 <div key={option} className="flex items-center space-x-2 p-1">
-                <Checkbox id={`bt-${option}`} checked={(draftFilters.businessTypes || []).includes(option)} onCheckedChange={(c) => handleMultiSelectChange('businessTypes', option, !!c)} />
+                <Checkbox id={`bt-${option}`} checked={draftFilters.businessTypes === null || draftFilters.businessTypes.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('businessTypes', option, !!c)} />
                 <Label htmlFor={`bt-${option}`} className="font-normal">{option}</Label>
                 </div>
             ))}
