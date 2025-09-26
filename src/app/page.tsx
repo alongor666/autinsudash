@@ -13,7 +13,7 @@ export default function DashboardPage() {
       <div className="flex min-h-screen w-full flex-col">
         <DashboardHeader />
         <main className="flex-1 space-y-4 p-4 md:p-6">
-          <div className="space-y-2">
+          <div className="flex items-end justify-between space-y-2">
             <FilterSummary />
             <FilterSummaryTitle />
           </div>

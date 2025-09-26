@@ -50,7 +50,7 @@ export function FilterSummary() {
   }, [rawData]);
 
   return (
-    <div className="text-sm text-muted-foreground">
+    <div className="text-sm text-muted-foreground flex-grow self-end">
         {latestDate && (
             <span>数据统计截至: {format(latestDate, 'yyyy-MM-dd')}</span>
         )}
@@ -68,6 +68,6 @@ export function FilterSummaryTitle() {
   }, [filters]);
 
   return (
-      <h2 className="text-2xl font-semibold text-center">{summary}</h2>
+      <h2 className="text-2xl font-semibold flex-grow text-center">{summary}</h2>
   );
 }
