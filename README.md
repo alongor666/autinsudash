@@ -120,25 +120,21 @@ week_number
 
 ## KPI指标说明
 
-### 第一行：绝对值指标
+### 核心指标
 1. **签单保费**（万元）：SUM(signed_premium_yuan)
-2. **满期保费**（万元）：SUM(matured_premium_yuan)
-3. **保单件数**（件）：SUM(policy_count)
-4. **赔案件数**（件）：SUM(claim_case_count)
+2. **满期赔付率**（%）：SUM(reported_claim_payment_yuan) / SUM(matured_premium_yuan) × 100
+3. **费用率**（%）：SUM(expense_amount_yuan) / SUM(signed_premium_yuan) × 100
+4. **满期边际贡献率**（%）：SUM(marginal_contribution_amount_yuan) / SUM(matured_premium_yuan) × 100
 
-### 第二行：核心率值指标
-5. **满期赔付率**（%）：SUM(reported_claim_payment_yuan) / SUM(matured_premium_yuan) × 100
-6. **费用率**（%）：SUM(expense_amount_yuan) / SUM(signed_premium_yuan) × 100
-7. **变动成本率**（%）：(SUM(expense_amount_yuan) / SUM(signed_premium_yuan) + SUM(reported_claim_payment_yuan) / SUM(matured_premium_yuan)) × 100
-8. **满期边际贡献率**（%）：SUM(marginal_contribution_amount_yuan) / SUM(matured_premium_yuan) × 100
-
-### 第三行：运营指标
+### 其他指标
+5. **满期保费**（万元）：SUM(matured_premium_yuan)
+6. **保单件数**（件）：SUM(policy_count)
+7. **赔案件数**（件）：SUM(claim_case_count)
+8. **变动成本率**（%）：(SUM(expense_amount_yuan) / SUM(signed_premium_yuan) + SUM(reported_claim_payment_yuan) / SUM(matured_premium_yuan)) × 100
 9. **满期出险率**（%）：(SUM(claim_case_count) / SUM(policy_count)) × (SUM(matured_premium_yuan) / SUM(signed_premium_yuan)) × 100
 10. **单均保费**（元）：SUM(signed_premium_yuan) / SUM(policy_count)
 11. **案均赔款**（元）：SUM(reported_claim_payment_yuan) / SUM(claim_case_count)
 12. **满期边际贡献额**（万元）：SUM(marginal_contribution_amount_yuan)
-
-### 第四行：商业险专项指标
 13. **商业险折前保费**（万元）：SUM(commercial_premium_before_discount_yuan)
 14. **商业险自主系数**：SUM(signed_premium_yuan) / SUM(commercial_premium_before_discount_yuan)
 15. **已报告赔款**（万元）：SUM(reported_claim_payment_yuan)

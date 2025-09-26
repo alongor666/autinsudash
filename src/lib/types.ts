@@ -1,4 +1,4 @@
-export type KPIKey = 'totalPremium' | 'lossRatio' | 'underwritingProfitMargin' | 'customerCount';
+export type KPIKey = 'signedPremium' | 'maturedLossRatio' | 'expenseRatio' | 'maturedMarginalContributionRate';
 
 export type Kpi = {
   id: KPIKey;

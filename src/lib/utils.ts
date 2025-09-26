@@ -31,34 +31,33 @@ export function calculateKPIs(data: RawDataRow[]): { [key in KPIKey]: Omit<Kpi, 
   const totalReportedClaim = data.reduce((acc, row) => acc + row.reported_claim_payment_yuan, 0);
   const totalExpense = data.reduce((acc, row) => acc + row.expense_amount_yuan, 0);
   const totalMarginalContribution = data.reduce((acc, row) => acc + row.marginal_contribution_amount_yuan, 0);
-  const totalPolicyCount = data.reduce((acc, row) => acc + row.policy_count, 0);
-
-  const lossRatio = totalMaturedPremium > 0 ? totalReportedClaim / totalMaturedPremium : 0;
+  
+  const maturedLossRatio = totalMaturedPremium > 0 ? totalReportedClaim / totalMaturedPremium : 0;
   const expenseRatio = totalSignedPremium > 0 ? totalExpense / totalSignedPremium : 0;
-  const underwritingProfitMargin = totalMaturedPremium > 0 ? totalMarginalContribution / totalMaturedPremium : 0;
+  const maturedMarginalContributionRate = totalMaturedPremium > 0 ? totalMarginalContribution / totalMaturedPremium : 0;
 
   return {
-    totalPremium: {
+    signedPremium: {
       value: `${formatCurrency(totalSignedPremium, 'ten_thousand')}万`,
       change: '+20.1%', // Placeholder
       changeType: 'increase',
       description: '较上周',
     },
-    lossRatio: {
-      value: formatPercentage(lossRatio),
+    maturedLossRatio: {
+      value: formatPercentage(maturedLossRatio),
       change: '-1.2%', // Placeholder
       changeType: 'decrease',
       description: '较上周',
     },
-    underwritingProfitMargin: {
-      value: formatPercentage(underwritingProfitMargin),
-      change: '+3.4%', // Placeholder
-      changeType: 'increase',
+    expenseRatio: {
+      value: formatPercentage(expenseRatio),
+      change: '-0.5%', // Placeholder
+      changeType: 'decrease',
       description: '较上周',
     },
-    customerCount: { // Assuming policy count is customer count for now
-      value: totalPolicyCount.toLocaleString(),
-      change: '+50', // Placeholder
+    maturedMarginalContributionRate: {
+      value: formatPercentage(maturedMarginalContributionRate),
+      change: '+3.4%', // Placeholder
       changeType: 'increase',
       description: '较上周',
     },

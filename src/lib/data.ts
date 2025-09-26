@@ -1,26 +1,26 @@
 import type { Kpi, FilterOptions, KPIKey } from './types';
 
 export const kpiData: { [key in KPIKey]: Omit<Kpi, 'title' | 'id'> } = {
-  totalPremium: {
+  signedPremium: {
     value: '¥0万',
     change: '0%',
     changeType: 'increase',
     description: '与上一周期相比',
   },
-  lossRatio: {
+  maturedLossRatio: {
     value: '0%',
     change: '0%',
     changeType: 'decrease',
     description: '与上一周期相比',
   },
-  underwritingProfitMargin: {
+  expenseRatio: {
     value: '0%',
     change: '0%',
-    changeType: 'increase',
+    changeType: 'decrease',
     description: '与上一周期相比',
   },
-  customerCount: {
-    value: '0',
+  maturedMarginalContributionRate: {
+    value: '0%',
     change: '0%',
     changeType: 'increase',
     description: '与上一周期相比',
@@ -28,10 +28,10 @@ export const kpiData: { [key in KPIKey]: Omit<Kpi, 'title' | 'id'> } = {
 };
 
 export const kpiMeta: { [key in KPIKey]: { title: string } } = {
-  totalPremium: { title: '总保费' },
-  lossRatio: { title: '赔付率' },
-  underwritingProfitMargin: { title: '承保利润率' },
-  customerCount: { title: '客户数' },
+  signedPremium: { title: '签单保费' },
+  maturedLossRatio: { title: '满期赔付率' },
+  expenseRatio: { title: '费用率' },
+  maturedMarginalContributionRate: { title: '满期边际贡献率' },
 };
 
 
@@ -50,7 +50,7 @@ export const chartData = [
   { week_number: 6, signed_premium_yuan: 300000, reported_claim_payment_yuan: 170000 },
 ];
 
-export const kpiListForAI = ['总保费', '赔付率', '承保利润率', '客户数'];
+export const kpiListForAI = (Object.values(kpiMeta) as { title: string }[]).map(k => k.title);
 
 // Flatten all filter options into a single array for the AI
 export const availableFiltersForAI = Object.values(filterOptions).flat();
