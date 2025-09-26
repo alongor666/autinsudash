@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useData } from '@/contexts/data-context';
 import { Filters, RawDataRow } from '@/lib/types';
 import { format } from 'date-fns';
-import { Separator } from '@/components/ui/separator';
 
 function getLatestSnapshotDate(data: RawDataRow[]): Date | null {
   if (!data || data.length === 0) {
@@ -42,30 +41,33 @@ function generateSummaryText(filters: Filters): string {
     return `${orgPart}${description}经营概况`;
 }
 
-
 export function FilterSummary() {
-  const { filters, rawData } = useData();
-  const [summary, setSummary] = useState("数据概况");
+  const { rawData } = useData();
   const [latestDate, setLatestDate] = useState<Date | null>(null);
 
   useEffect(() => {
      setLatestDate(getLatestSnapshotDate(rawData));
   }, [rawData]);
 
+  return (
+    <div className="text-sm text-muted-foreground">
+        {latestDate && (
+            <span>数据统计截至: {format(latestDate, 'yyyy-MM-dd')}</span>
+        )}
+    </div>
+  );
+}
+
+export function FilterSummaryTitle() {
+  const { filters } = useData();
+  const [summary, setSummary] = useState("数据概况");
+  
   useEffect(() => {
     const newSummary = generateSummaryText(filters);
     setSummary(newSummary);
   }, [filters]);
 
   return (
-    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-        {latestDate && (
-            <>
-                <span>数据统计截至: {format(latestDate, 'yyyy-MM-dd')}</span>
-                <Separator orientation="vertical" className="h-4" />
-            </>
-        )}
-        <h2 className="font-medium text-foreground">{summary}</h2>
-    </div>
+      <h2 className="text-2xl font-semibold text-center">{summary}</h2>
   );
 }
