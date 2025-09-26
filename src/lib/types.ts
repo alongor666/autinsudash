@@ -13,12 +13,16 @@ export type FilterOptions = {
   years: string[];
   regions: string[];
   insuranceTypes: string[];
+  businessTypes: string[];
+  newEnergyStatus: string[];
 };
 
 export type Filters = {
   year: string | null;
   regions: string[];
   insuranceTypes: string[];
+  businessTypes: string[];
+  newEnergyStatus: string[];
 }
 
 export type RawDataRow = {

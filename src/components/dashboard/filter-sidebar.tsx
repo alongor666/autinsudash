@@ -106,6 +106,20 @@ export function FilterSidebar() {
       : draftFilters.insuranceTypes.filter((t) => t !== type);
     setDraftFilters({ ...draftFilters, insuranceTypes: newTypes });
   };
+
+  const handleBusinessTypeChange = (type: string, checked: boolean) => {
+    const newTypes = checked
+     ? [...draftFilters.businessTypes, type]
+     : draftFilters.businessTypes.filter((t) => t !== type);
+   setDraftFilters({ ...draftFilters, businessTypes: newTypes });
+ };
+
+ const handleNewEnergyChange = (status: string, checked: boolean) => {
+    const newStatus = checked
+     ? [...draftFilters.newEnergyStatus, status]
+     : draftFilters.newEnergyStatus.filter((s) => s !== status);
+    setDraftFilters({ ...draftFilters, newEnergyStatus: newStatus });
+ };
   
   const applyFilters = () => {
     setFilters(draftFilters);
@@ -125,10 +139,20 @@ export function FilterSidebar() {
   };
 
   const dimensionLabels: { [key: string]: string } = {
-    time: '时间',
-    regions: '地区',
-    insuranceTypes: '险种',
+    year: '保单年度',
+    regions: '三级机构',
+    insuranceTypes: '车险种类',
+    businessTypes: '业务类型',
+    newEnergyStatus: '是否新能源车',
   };
+
+  const defaultOpen = [
+    'year',
+    'regions',
+    'insuranceTypes',
+    'businessTypes',
+    'newEnergyStatus'
+  ];
 
   return (
     <Sidebar>
@@ -173,10 +197,10 @@ export function FilterSidebar() {
             </div>
           )}
         </SidebarGroup>
-        <Accordion type="multiple" defaultValue={['time', 'regions', 'insuranceTypes']} className="w-full px-2">
+        <Accordion type="multiple" defaultValue={defaultOpen} className="w-full px-2">
           
-          <AccordionItem value="time">
-            <AccordionTrigger>{dimensionLabels['time']}</AccordionTrigger>
+          <AccordionItem value="year">
+            <AccordionTrigger>{dimensionLabels['year']}</AccordionTrigger>
             <AccordionContent className="space-y-4 pt-2">
               <Select onValueChange={handleYearChange} value={draftFilters.year || ''}>
                 <SelectTrigger aria-label="按年份筛选">
@@ -224,6 +248,44 @@ export function FilterSidebar() {
                     onCheckedChange={(checked) => handleInsuranceTypeChange(option, !!checked)}
                   />
                   <Label htmlFor={`type-${option}`} className="font-normal">
+                    {option}
+                  </Label>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="businessTypes">
+            <AccordionTrigger>{dimensionLabels['businessTypes']}</AccordionTrigger>
+            <AccordionContent className="space-y-2 pt-2">
+              {filterOptions.businessTypes.map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`businessType-${option}`}
+                    value={option}
+                    checked={draftFilters.businessTypes.includes(option)}
+                    onCheckedChange={(checked) => handleBusinessTypeChange(option, !!checked)}
+                  />
+                  <Label htmlFor={`businessType-${option}`} className="font-normal">
+                    {option}
+                  </Label>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
+          
+          <AccordionItem value="newEnergyStatus">
+            <AccordionTrigger>{dimensionLabels['newEnergyStatus']}</AccordionTrigger>
+            <AccordionContent className="space-y-2 pt-2">
+              {filterOptions.newEnergyStatus.map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`newEnergyStatus-${option}`}
+                    value={option}
+                    checked={draftFilters.newEnergyStatus.includes(option)}
+                    onCheckedChange={(checked) => handleNewEnergyChange(option, !!checked)}
+                  />
+                  <Label htmlFor={`newEnergyStatus-${option}`} className="font-normal">
                     {option}
                   </Label>
                 </div>

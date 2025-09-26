@@ -27,6 +27,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     year: null,
     regions: [],
     insuranceTypes: [],
+    businessTypes: [],
+    newEnergyStatus: [],
   });
   const [kpiData, setKpiData] = useState(defaultKpiData);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
@@ -39,7 +41,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
      const years = [...new Set(rawData.map(row => row.policy_start_year.toString()))].sort((a,b) => b.localeCompare(a));
      const regions = [...new Set(rawData.map(row => row.third_level_organization))].sort();
      const insuranceTypes = [...new Set(rawData.map(row => row.insurance_type))].sort();
-     return { years, regions, insuranceTypes };
+     const businessTypes = [...new Set(rawData.map(row => row.business_type_category))].sort();
+     const newEnergyStatus = [...new Set(rawData.map(row => row.is_new_energy_vehicle))].sort();
+     return { years, regions, insuranceTypes, businessTypes, newEnergyStatus };
   }, [rawData]);
 
   useEffect(() => {
@@ -47,7 +51,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const yearMatch = !filters.year || row.policy_start_year.toString() === filters.year;
       const regionMatch = filters.regions.length === 0 || filters.regions.includes(row.third_level_organization);
       const typeMatch = filters.insuranceTypes.length === 0 || filters.insuranceTypes.includes(row.insurance_type);
-      return yearMatch && regionMatch && typeMatch;
+      const businessTypeMatch = filters.businessTypes.length === 0 || filters.businessTypes.includes(row.business_type_category);
+      const newEnergyStatusMatch = filters.newEnergyStatus.length === 0 || filters.newEnergyStatus.includes(row.is_new_energy_vehicle);
+      return yearMatch && regionMatch && typeMatch && businessTypeMatch && newEnergyStatusMatch;
     });
     setFilteredData(newFilteredData);
     setKpiData(calculateKPIs(newFilteredData));
@@ -57,13 +63,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
    useEffect(() => {
     if (rawData.length > 0 && filterOptions.years.length > 0) {
       const latestYear = filterOptions.years[0];
-      // Set the year filter to the latest year only if it's not already set
-      // or if the current selection is no longer valid.
       if (filters.year !== latestYear) {
-         setFilters(f => ({ ...f, year: latestYear, regions: [], insuranceTypes: [] }));
+         setFilters(f => ({ ...f, year: latestYear, regions: [], insuranceTypes: [], businessTypes: [], newEnergyStatus: [] }));
       }
     }
-  }, [rawData, filterOptions.years]); // Removed filters.year to avoid loop
+  }, [rawData, filterOptions.years]);
 
   const value = {
     rawData,

@@ -39,6 +39,8 @@ export const filterOptions: FilterOptions = {
   years: ['2024', '2023', '2022'],
   regions: ['成都', '绵阳', '德阳', '南充', '宜宾'],
   insuranceTypes: ['交强险', '商业险'],
+  businessTypes: ['新车', '转保', '续保'],
+  newEnergyStatus: ['是', '否'],
 };
 
 export const chartData = [
