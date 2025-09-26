@@ -168,66 +168,74 @@ export function TopFilters() {
               在这里手动配置或使用智能洞察。
             </p>
           </div>
-          <Separator />
-            <div className="relative">
-            <Input
-              type="search"
-              placeholder="输入“成都”、“新车”等获取智能建议..."
-              className="pr-8"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              aria-label="Predictive filter search"
-            />
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="absolute right-0 top-0 h-full w-10"
-              onClick={handleSearch}
-              disabled={isSearching}
-              aria-label="Search"
-            >
-              {isSearching ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <Search className="h-4 w-4" />}
-            </Button>
-          </div>
           
-          {suggestedFilters.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">筛选建议:</Label>
-              <div className="flex flex-wrap gap-1">
-                {suggestedFilters.map(filter => (
-                  <Button
-                    key={`${filter.dimension}-${filter.value}`}
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => addAiFilter(filter)}
-                  >
-                    {filter.value}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-            {aiDraftFilters.length > 0 && (
-            <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">已选智能筛选:</Label>
-                <div className="flex flex-wrap gap-1">
-                  {aiDraftFilters.map(filter => (
-                      <Badge key={`${filter.dimension}-${filter.value}`} variant="secondary" className="flex items-center gap-1">
-                          {filter.value}
-                          <button onClick={() => removeAiFilter(filter)} className="rounded-full hover:bg-muted-foreground/20">
-                              <X className="h-3 w-3"/>
-                          </button>
-                      </Badge>
-                  ))}
-                </div>
-            </div>
-          )}
-
-
+          <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={resetDraft}>重置</Button>
+              <Button onClick={applyAllFilters}>应用筛选</Button>
+          </div>
           <Separator />
-          <Accordion type="multiple" className="w-full" defaultValue={['common']}>
+
+          <Accordion type="multiple" className="w-full">
+            <AccordionItem value="ai-search">
+              <AccordionTrigger>智能洞察</AccordionTrigger>
+              <AccordionContent className="space-y-4 pt-2">
+                <div className="relative">
+                  <Input
+                    type="search"
+                    placeholder="输入“成都”、“新车”等获取智能建议..."
+                    className="pr-8"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    aria-label="Predictive filter search"
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute right-0 top-0 h-full w-10"
+                    onClick={handleSearch}
+                    disabled={isSearching}
+                    aria-label="Search"
+                  >
+                    {isSearching ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                </div>
+                
+                {suggestedFilters.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">筛选建议:</Label>
+                    <div className="flex flex-wrap gap-1">
+                      {suggestedFilters.map(filter => (
+                        <Button
+                          key={`${filter.dimension}-${filter.value}`}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => addAiFilter(filter)}
+                        >
+                          {filter.value}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                  {aiDraftFilters.length > 0 && (
+                  <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">已选智能筛选:</Label>
+                      <div className="flex flex-wrap gap-1">
+                        {aiDraftFilters.map(filter => (
+                            <Badge key={`${filter.dimension}-${filter.value}`} variant="secondary" className="flex items-center gap-1">
+                                {filter.value}
+                                <button onClick={() => removeAiFilter(filter)} className="rounded-full hover:bg-muted-foreground/20">
+                                    <X className="h-3 w-3"/>
+                                </button>
+                            </Badge>
+                        ))}
+                      </div>
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
               <AccordionItem value="common">
                 <AccordionTrigger>常规筛选</AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-2">
@@ -277,7 +285,7 @@ export function TopFilters() {
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="advanced">
-                  <AccordionTrigger>高级筛选</AccordionTrigger>
+                  <AccordionTrigger>更多筛选</AccordionTrigger>
                   <AccordionContent className="space-y-4 pt-2">
                      <div className="space-y-2">
                       <Label>车险种类</Label>
@@ -326,11 +334,6 @@ export function TopFilters() {
                   </AccordionContent>
               </AccordionItem>
           </Accordion>
-          <Separator />
-          <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={resetDraft}>重置</Button>
-              <Button onClick={applyAllFilters}>应用筛选</Button>
-          </div>
         </div>
       </PopoverContent>
     </Popover>

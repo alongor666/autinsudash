@@ -35,7 +35,7 @@ export async function generateFilterSummary(input: Filters): Promise<GenerateFil
     if (Array.isArray(value)) {
       return value.length > 0;
     }
-    return value !== null && value !== undefined;
+    return value !== null && value !== undefined && value !== '';
   });
 
   if (activeFilters.length === 0) {
@@ -50,28 +50,35 @@ const generateFilterSummaryPrompt = ai.definePrompt({
   name: 'generateFilterSummaryPrompt',
   input: { schema: GenerateFilterSummaryInputSchema },
   output: { schema: GenerateFilterSummaryOutputSchema },
-  prompt: `You are an expert at creating concise and natural language summaries for a dashboard. Based on the following filter object, generate a summary string.
+  prompt: `You are an expert at creating concise and natural language summaries for a dashboard based on a filter object.
 
-The format should be like: "[三级机构][保单年度]年保单第[周序号]周[业务类型]经营概况".
+Your task is to generate a summary string following this exact format: "[三级机构][保单年度]年保单第[周序号]周[业务类型]经营概况".
 
-- If a filter is not present, its corresponding part in the title should be omitted.
-- Combine multiple values for a filter (like businessTypes) naturally.
-- If no filters are applied, the summary should be "全量数据经营概况".
+IMPORTANT RULES:
+1.  If a filter is not present or is an empty array, its corresponding part in the title (including connecting words like "年保单", "第...周") MUST be omitted.
+2.  If multiple values exist for a filter (like businessTypes), combine them with a "、" character.
+3.  If no filters are applied at all, the summary MUST be "全量数据经营概况".
+4.  Do not add any extra words, explanations, or labels like "当前筛选：". Only return the generated summary string.
 
-Examples:
-- Input: { year: '2024', region: '天府', businessTypes: null, weekNumber: null, ... } -> Output: "天府2024年经营概况"
-- Input: { year: '2024', region: '天府', businessTypes: ['新车'], weekNumber: '38', ... } -> Output: "天府2024年保单第38周新车业务经营概况"
-- Input: { year: null, region: null, businessTypes: ['新车', '续保'], weekNumber: null, ... } -> Output: "新车、续保业务经营概况"
+Here are some examples:
+- Input: { year: '2024', region: '天府', businessTypes: null, weekNumber: null }
+  Output: 天府2024年经营概况
+- Input: { year: '2024', region: '天府', businessTypes: ['新车'], weekNumber: '38' }
+  Output: 天府2024年保单第38周新车业务经营概况
+- Input: { year: null, region: null, businessTypes: ['新车', '续保'], weekNumber: null }
+  Output: 新车、续保业务经营概况
+- Input: { year: '2023', region: null, weekNumber: '52' }
+  Output: 2023年保单第52周经营概况
 
-Filter data:
+Now, generate a summary for the following filter data:
 - 保单年度(year): {{year}}
 - 三级机构(region): {{region}}
 - 周序号(weekNumber): {{weekNumber}}
-- 业务类型(businessTypes): {{#if businessTypes}}{{join businessTypes ', '}}{{/if}}
-- 车险种类(insuranceTypes): {{#if insuranceTypes}}{{join insuranceTypes ', '}}{{/if}}
-- 是否新能源(newEnergyStatus): {{#if newEnergyStatus}}{{join newEnergyStatus ', '}}{{/if}}
-- 是否过户车(transferredStatus): {{#if transferredStatus}}{{join transferredStatus ', '}}{{/if}}
-- 险别组合(coverageTypes): {{#if coverageTypes}}{{join coverageTypes ', '}}{{/if}}
+- 业务类型(businessTypes): {{#if businessTypes}}{{join businessTypes '、'}}{{/if}}
+- 车险种类(insuranceTypes): {{#if insuranceTypes}}{{join insuranceTypes '、'}}{{/if}}
+- 是否新能源(newEnergyStatus): {{#if newEnergyStatus}}{{join newEnergyStatus '、'}}{{/if}}
+- 是否过户车(transferredStatus): {{#if transferredStatus}}{{join transferredStatus '、'}}{{/if}}
+- 险别组合(coverageTypes): {{#if coverageTypes}}{{join coverageTypes '、'}}{{/if}}
 `,
 });
 
