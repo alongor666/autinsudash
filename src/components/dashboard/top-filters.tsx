@@ -16,7 +16,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, SlidersHorizontal, Search } from 'lucide-react';
+import { ChevronDown, SlidersHorizontal, Search, X } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import {
   Accordion,
@@ -24,12 +24,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import type { Filters } from '@/lib/types';
+import type { Filters, SuggestedFilter } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '../ui/separator';
 import { Input } from '../ui/input';
 import { getPredictiveSuggestions } from '@/app/actions';
 import { kpiListForAI } from '@/lib/data';
+import { Badge } from '../ui/badge';
 
 function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
   let timeout: NodeJS.Timeout;
@@ -47,8 +48,9 @@ export function TopFilters() {
   const { toast } = useToast();
 
   const [searchInput, setSearchInput] = useState('');
-  const [suggestedFilters, setSuggestedFilters] = useState<string[]>([]);
+  const [suggestedFilters, setSuggestedFilters] = useState<SuggestedFilter[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [aiDraftFilters, setAiDraftFilters] = useState<SuggestedFilter[]>([]);
 
 
   const handleSearch = async (query: string) => {
@@ -139,10 +141,45 @@ export function TopFilters() {
       : (draftFilters.coverageTypes || []).filter(t => t !== type);
     setDraftFilters({ ...draftFilters, coverageTypes: newTypes });
   };
+  
+  const addAiFilter = (filter: SuggestedFilter) => {
+    if (!aiDraftFilters.some(f => f.dimension === filter.dimension && f.value === filter.value)) {
+        setAiDraftFilters(prev => [...prev, filter]);
+    }
+  };
+
+  const removeAiFilter = (filterToRemove: SuggestedFilter) => {
+    setAiDraftFilters(prev => prev.filter(f => !(f.dimension === filterToRemove.dimension && f.value === filterToRemove.value)));
+  };
+
 
   const applyAdvancedFilters = () => {
-    setFilters(draftFilters);
+    let combinedFilters = { ...draftFilters };
+
+    aiDraftFilters.forEach(filter => {
+      const { dimension, value } = filter;
+      switch (dimension) {
+        case 'third_level_organization':
+            combinedFilters.region = value;
+            break;
+        case 'business_type_category':
+            combinedFilters.businessTypes = [...(combinedFilters.businessTypes || []), value];
+            break;
+        case 'insurance_type':
+            combinedFilters.insuranceTypes = [...(combinedFilters.insuranceTypes || []), value];
+            break;
+        case 'is_new_energy_vehicle':
+            combinedFilters.newEnergyStatus = [...(combinedFilters.newEnergyStatus || []), value];
+            break;
+        // Extend with other dimensions as needed
+      }
+    });
+
+    setFilters(combinedFilters);
     setIsPopoverOpen(false);
+    setAiDraftFilters([]);
+    setSearchInput('');
+    setSuggestedFilters([]);
     toast({
       title: '更多筛选已应用',
       description: '仪表板已根据您的选择更新。',
@@ -151,6 +188,7 @@ export function TopFilters() {
 
   const resetDraft = () => {
     setDraftFilters(filters);
+    setAiDraftFilters([]);
     toast({
       title: '重置成功',
       description: '筛选条件已恢复。',
@@ -263,12 +301,12 @@ export function TopFilters() {
             更多筛选
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80">
+        <PopoverContent className="w-96">
           <div className="grid gap-4">
             <div className="space-y-2">
               <h4 className="font-medium leading-none">更多筛选</h4>
               <p className="text-sm text-muted-foreground">
-                在这里选择更多筛选维度或使用智能洞察。
+                在这里手动配置或使用智能洞察。
               </p>
             </div>
             <Separator />
@@ -276,30 +314,50 @@ export function TopFilters() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="智能洞察..."
+                placeholder="输入“成都”、“新车”等获取智能建议..."
                 className="pl-8"
+                value={searchInput}
                 onChange={(e) => debouncedSearch(e.target.value)}
                 aria-label="Predictive filter search"
               />
               {isSearching && <div className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />}
             </div>
+            
             {suggestedFilters.length > 0 && (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">筛选建议:</Label>
                 <div className="flex flex-wrap gap-1">
                   {suggestedFilters.map(filter => (
                     <Button
-                      key={filter}
+                      key={`${filter.dimension}-${filter.value}`}
                       variant="outline"
                       size="sm"
                       className="h-7 text-xs"
+                      onClick={() => addAiFilter(filter)}
                     >
-                      {filter}
+                      {filter.value}
                     </Button>
                   ))}
                 </div>
               </div>
             )}
+             {aiDraftFilters.length > 0 && (
+              <div className="space-y-2">
+                 <Label className="text-xs text-muted-foreground">已选智能筛选:</Label>
+                 <div className="flex flex-wrap gap-1">
+                    {aiDraftFilters.map(filter => (
+                        <Badge key={`${filter.dimension}-${filter.value}`} variant="secondary" className="flex items-center gap-1">
+                            {filter.value}
+                            <button onClick={() => removeAiFilter(filter)} className="rounded-full hover:bg-muted-foreground/20">
+                               <X className="h-3 w-3"/>
+                            </button>
+                        </Badge>
+                    ))}
+                 </div>
+              </div>
+            )}
+
+
             <Separator />
             <Accordion type="multiple" className="w-full">
                 <AccordionItem value="insuranceTypes">

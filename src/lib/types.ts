@@ -31,6 +31,11 @@ export type Filters = {
   coverageTypes: string[] | null;
 }
 
+export type SuggestedFilter = {
+    dimension: string;
+    value: string;
+}
+
 export type RawDataRow = {
   snapshot_date: string;
   policy_start_year: number;
