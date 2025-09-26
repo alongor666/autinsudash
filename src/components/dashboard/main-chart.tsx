@@ -1,40 +1,51 @@
 'use client';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Legend, Line, LineChart, ComposedChart } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { chartData } from '@/lib/data';
+import { useData } from '@/contexts/data-context';
 
 const chartConfig = {
-  "总保费": {
-    label: '总保费',
-    color: 'hsl(var(--primary))',
+  "signed_premium_yuan": {
+    label: '签单保费',
+    color: 'hsl(var(--chart-1))',
   },
-  "赔付额": {
-    label: '赔付额',
-    color: 'hsl(var(--destructive))',
+  "reported_claim_payment_yuan": {
+    label: '已报告赔款',
+    color: 'hsl(var(--chart-2))',
   },
 } satisfies ChartConfig;
 
 export function MainChart() {
+  const { chartData } = useData();
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>核心指标趋势</CardTitle>
-        <CardDescription>最近6个月</CardDescription>
+        <CardDescription>按周汇总</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px] w-full">
-          <BarChart accessibilityLayer data={chartData}>
+          <ComposedChart accessibilityLayer data={chartData}>
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="date"
+              dataKey="week_number"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
               stroke="hsl(var(--muted-foreground))"
+              tickFormatter={(value) => `W${value}`}
             />
             <YAxis
-              tickFormatter={(value) => `¥${Number(value) / 1000}k`}
+              yAxisId="left"
+              orientation="left"
+              tickFormatter={(value) => `${Number(value) / 10000}万`}
+              stroke="hsl(var(--muted-foreground))"
+            />
+             <YAxis
+              yAxisId="right"
+              orientation="right"
+              tickFormatter={(value) => `${Number(value) / 10000}万`}
               stroke="hsl(var(--muted-foreground))"
             />
             <ChartTooltip
@@ -42,9 +53,9 @@ export function MainChart() {
               content={<ChartTooltipContent indicator="dot" />}
             />
             <Legend />
-            <Bar dataKey="总保费" fill="var(--color-总保费)" radius={4} />
-            <Bar dataKey="赔付额" fill="var(--color-赔付额)" radius={4} />
-          </BarChart>
+            <Bar dataKey="signed_premium_yuan" name="签单保费" fill="var(--color-signed_premium_yuan)" radius={4} yAxisId="left" />
+            <Line dataKey="reported_claim_payment_yuan" name="已报告赔款" type="monotone" stroke="var(--color-reported_claim_payment_yuan)" strokeWidth={2} dot={false} yAxisId="right" />
+          </ComposedChart>
         </ChartContainer>
       </CardContent>
     </Card>

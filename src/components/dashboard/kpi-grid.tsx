@@ -1,12 +1,12 @@
-import { kpiData, kpiMeta } from '@/lib/data';
+'use client';
+import { kpiMeta } from '@/lib/data';
 import { KpiCard } from './kpi-card';
 import type { KPIKey } from '@/lib/types';
+import { useData } from '@/contexts/data-context';
 
-type KpiGridProps = {
-  highlightedKpis: string[];
-};
-
-export function KpiGrid({ highlightedKpis }: KpiGridProps) {
+export function KpiGrid() {
+  const { kpiData, highlightedKpis } = useData();
+  
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {(Object.keys(kpiData) as KPIKey[]).map((key) => {

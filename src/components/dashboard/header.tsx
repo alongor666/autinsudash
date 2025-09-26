@@ -5,29 +5,64 @@ import { Upload, Download, Settings, Bell } from 'lucide-react';
 import { AppLogo } from '@/components/app-logo';
 import { useToast } from "@/hooks/use-toast";
 import React from 'react';
+import { useData } from '@/contexts/data-context';
+import { parseCSV, exportToCSV } from '@/lib/csv';
 
 export function DashboardHeader() {
   const { toast } = useToast();
+  const { rawData, setRawData, filteredData } = useData();
   
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      console.log('File uploaded:', file.name);
       toast({
         title: "文件上传成功",
         description: `文件 ${file.name} 正在处理中。`,
       });
-      // In a real app, process the CSV file here.
+      try {
+        const data = await parseCSV(file);
+        setRawData(data);
+        toast({
+          title: "数据处理完成",
+          description: `成功导入 ${data.length} 条记录。`,
+        });
+      } catch (error) {
+        console.error(error);
+        toast({
+          variant: 'destructive',
+          title: "CSV 解析失败",
+          description: error instanceof Error ? error.message : "未知错误",
+        });
+      }
     }
+    // Reset file input to allow re-uploading the same file
+    event.target.value = '';
   };
 
   const handleExport = () => {
-    console.log('Exporting data...');
-    toast({
-      title: "数据正在导出",
-      description: "您的数据将很快开始下载。",
-    });
-    // In a real app, generate and download the CSV here.
+    if (filteredData.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: "导出失败",
+        description: "没有可导出的数据。",
+      });
+      return;
+    }
+    
+    try {
+      exportToCSV(filteredData, 'dashboard_data.csv');
+      toast({
+        title: "数据正在导出",
+        description: "您的数据将很快开始下载。",
+      });
+    } catch(error) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: "导出失败",
+        description: "导出数据时发生错误。",
+      });
+    }
   };
 
   return (
