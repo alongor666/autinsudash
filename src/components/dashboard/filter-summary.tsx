@@ -84,7 +84,7 @@ export function FilterSummary() {
   }, [rawData, filteredData, filters.weekNumber]);
 
   return (
-    <div className="text-sm text-muted-foreground flex-grow self-end">
+    <div className="text-sm text-muted-foreground">
         {displayDate && (
             <span>数据统计截至: {format(displayDate, 'yyyy-MM-dd')}</span>
         )}
@@ -102,6 +102,6 @@ export function FilterSummaryTitle() {
   }, [filters, filterOptions.businessTypes]);
 
   return (
-      <h2 className="text-2xl font-semibold text-center flex-grow">{summary}</h2>
+      <h2 className="text-2xl font-semibold text-center">{summary}</h2>
   );
 }
