@@ -189,16 +189,12 @@ export function TopFilters() {
       </PopoverTrigger>
       <PopoverContent className="w-96">
         <div className="grid gap-4">
-          <div className="space-y-2">
-            <h4 className="font-medium leading-none">智能筛选与配置</h4>
-            <p className="text-sm text-muted-foreground">
-              使用AI洞察或手动配置筛选维度。
-            </p>
-          </div>
-          
-          <div className="flex justify-end gap-2">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium leading-none">智能筛选</h4>
+            <div className="flex items-center gap-2">
               <Button variant="ghost" onClick={resetDraft}>重置</Button>
               <Button onClick={applyAllFilters}>应用筛选</Button>
+            </div>
           </div>
           <Separator />
 
