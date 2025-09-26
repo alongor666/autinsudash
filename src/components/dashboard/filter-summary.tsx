@@ -8,13 +8,18 @@ function getLatestSnapshotDate(data: RawDataRow[]): Date | null {
   if (!data || data.length === 0) {
     return null;
   }
-  const latestDate = new Date(
-    Math.max(
-      ...data.map(row => new Date(row.snapshot_date).getTime())
-    )
-  );
-  return isNaN(latestDate.getTime()) ? null : latestDate;
+  const validDates = data
+    .map(row => new Date(row.snapshot_date))
+    .filter(date => !isNaN(date.getTime()));
+
+  if (validDates.length === 0) {
+    return null;
+  }
+  
+  const latestDate = new Date(Math.max(...validDates.map(date => date.getTime())));
+  return latestDate;
 }
+
 
 function generateSummaryText(filters: Filters): string {
     const orgPart = filters.region || '四川分公司';
@@ -42,17 +47,20 @@ function generateSummaryText(filters: Filters): string {
 }
 
 export function FilterSummary() {
-  const { rawData } = useData();
-  const [latestDate, setLatestDate] = useState<Date | null>(null);
+  const { rawData, filteredData, filters } = useData();
+  const [displayDate, setDisplayDate] = useState<Date | null>(null);
 
   useEffect(() => {
-     setLatestDate(getLatestSnapshotDate(rawData));
-  }, [rawData]);
+    // If a week is selected, find the snapshot date from the filtered data.
+    // Otherwise, find the latest date from all raw data.
+    const dataForDate = filters.weekNumber ? filteredData : rawData;
+    setDisplayDate(getLatestSnapshotDate(dataForDate));
+  }, [rawData, filteredData, filters.weekNumber]);
 
   return (
     <div className="text-sm text-muted-foreground flex-grow self-end">
-        {latestDate && (
-            <span>数据统计截至: {format(latestDate, 'yyyy-MM-dd')}</span>
+        {displayDate && (
+            <span>数据统计截至: {format(displayDate, 'yyyy-MM-dd')}</span>
         )}
     </div>
   );
