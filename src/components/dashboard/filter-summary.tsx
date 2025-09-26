@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useData } from '@/contexts/data-context';
 import { Filters, RawDataRow } from '@/lib/types';
 import { format } from 'date-fns';
-import { businessTypeAliases } from '@/lib/data';
+import { businessTypeCombinations } from '@/lib/data';
 
 function getLatestSnapshotDate(data: RawDataRow[]): Date | null {
   if (!data || data.length === 0) {
@@ -21,16 +21,16 @@ function getLatestSnapshotDate(data: RawDataRow[]): Date | null {
   return latestDate;
 }
 
-function getBusinessTypeAlias(selectedTypes: string[], allTypes: string[]): string {
+function getBusinessTypeCombination(selectedTypes: string[], allTypes: string[]): string {
     if (!selectedTypes || selectedTypes.length === 0 || selectedTypes.length === allTypes.length) {
         return '';
     }
 
     const selectedSet = new Set(selectedTypes);
     
-    for (const alias of businessTypeAliases) {
-        if (alias.matchFunction(selectedSet, allTypes)) {
-            return alias.name;
+    for (const combination of businessTypeCombinations) {
+        if (combination.matchFunction(selectedSet, allTypes)) {
+            return combination.name;
         }
     }
 
@@ -49,7 +49,7 @@ function generateSummaryText(filters: Filters, allBusinessTypes: string[]): stri
 
     const insuranceTypes = (filters.insuranceTypes || []).join('、');
     
-    const businessTypePart = getBusinessTypeAlias(filters.businessTypes || [], allBusinessTypes);
+    const businessTypePart = getBusinessTypeCombination(filters.businessTypes || [], allBusinessTypes);
 
     let description = [yearPart, weekPart, businessTypePart].filter(Boolean).join(' ');
     

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>业务类型组合测试</title>
+</head>
+<body>
+    <h1>业务类型组合测试</h1>
+    <div id="test-results"></div>
+
+    <script>
+        // 模拟业务类型组合配置
+        const businessTypeCombinations = [
+            {
+                name: '货车',
+                description: '选择所有货车相关类型',
+                matchFunction: (selected) => {
+                    const truckTypes = [
+                        '10吨以上-普货',
+                        '10吨以上-牵引',
+                        '2-9吨营业货车',
+                        '2吨以下营业货车',
+                        '9-10吨营业货车',
+                        '其他',
+                        '非营业货车新车',
+                        '非营业货车旧车'
+                    ];
+                    const hasTruckTypes = truckTypes.every(type => selected.has(type));
+                    return selected.size === truckTypes.length && hasTruckTypes;
+                }
+            },
+            {
+                name: '大货车',
+                description: '选择"10吨以上-普货"、"10吨以上-牵引"、"9-10吨营业货车"',
+                matchFunction: (selected) => {
+                    const bigTruckTypes = ['10吨以上-普货', '10吨以上-牵引', '9-10吨营业货车'];
+                    const hasBigTruckTypes = bigTruckTypes.every(type => selected.has(type));
+                    return selected.size === bigTruckTypes.length && hasBigTruckTypes;
+                }
+            },
+            {
+                name: '小货车',
+                description: '选择"非营业货车新车"、"2吨以下营业货车"、"非营业货车旧车"',
+                matchFunction: (selected) => {
+                    const smallTruckTypes = ['非营业货车新车', '2吨以下营业货车', '非营业货车旧车'];
+                    const hasSmallTruckTypes = smallTruckTypes.every(type => selected.has(type));
+                    return selected.size === smallTruckTypes.length && hasSmallTruckTypes;
+                }
+            }
+        ];
+
+        // 测试用例
+        const testCases = [
+            {
+                name: '大货车测试',
+                selectedTypes: ['10吨以上-普货', '10吨以上-牵引', '9-10吨营业货车'],
+                expectedAlias: '大货车'
+            },
+            {
+                name: '小货车测试',
+                selectedTypes: ['非营业货车新车', '2吨以下营业货车', '非营业货车旧车'],
+                expectedAlias: '小货车'
+            },
+            {
+                name: '货车测试',
+                selectedTypes: [
+                    '10吨以上-普货',
+                    '10吨以上-牵引',
+                    '2-9吨营业货车',
+                    '2吨以下营业货车',
+                    '9-10吨营业货车',
+                    '其他',
+                    '非营业货车新车',
+                    '非营业货车旧车'
+                ],
+                expectedAlias: '货车'
+            }
+        ];
+
+        // 运行测试
+        function runTests() {
+            const resultsDiv = document.getElementById('test-results');
+            let html = '<h2>测试结果</h2>';
+
+            testCases.forEach(testCase => {
+                const selectedSet = new Set(testCase.selectedTypes);
+                let matchedAlias = null;
+
+                for (const combination of businessTypeCombinations) {
+                    if (combination.matchFunction(selectedSet)) {
+                        matchedAlias = combination.name;
+                        break;
+                    }
+                }
+
+                const passed = matchedAlias === testCase.expectedAlias;
+                html += `
+                    <div style="margin: 10px 0; padding: 10px; border: 1px solid ${passed ? 'green' : 'red'}; background: ${passed ? '#e8f5e8' : '#ffe8e8'};">
+                        <h3>${testCase.name}</h3>
+                        <p><strong>选择类型:</strong> ${testCase.selectedTypes.join(', ')}</p>
+                        <p><strong>期望组合:</strong> ${testCase.expectedAlias}</p>
+                        <p><strong>实际组合:</strong> ${matchedAlias || '无匹配'}</p>
+                        <p><strong>测试结果:</strong> ${passed ? '✅ 通过' : '❌ 失败'}</p>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // 页面加载后运行测试
+        window.onload = runTests;
+    </script>
+</body>
+</html>

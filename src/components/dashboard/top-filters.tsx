@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from '../ui/scroll-area';
 import type { Filters } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { businessTypeAliases } from '@/lib/data';
+import { businessTypeCombinations } from '@/lib/data';
 import { SheetHeader, SheetTitle } from '../ui/sheet';
 
 interface TopFiltersProps {
@@ -51,29 +51,56 @@ export function TopFilters({ onApply }: TopFiltersProps) {
   };
 
 
-  const handleBusinessTypeAliasClick = (aliasName: string) => {
-    const alias = businessTypeAliases.find(a => a.name === aliasName);
-    if (!alias) return;
+  const handleBusinessTypeCombinationClick = (combinationName: string) => {
+    const combination = businessTypeCombinations.find(c => c.name === combinationName);
+    if (!combination) return;
 
     const allTypes = filterOptions.businessTypes;
     let newSelection: string[] = [];
-    
-    if (alias.name === '货车') {
-      newSelection = allTypes.filter(t => t.includes('货') || t.includes('牵引'));
-    } else if (alias.name === '大货车') {
-        newSelection = allTypes.filter(t => t.includes('9吨及以上'));
-    } else if (alias.name === '小货车') {
-        newSelection = allTypes.filter(t => t.includes('2吨及以下'));
-    } else if (alias.name === '营业货车') {
-      newSelection = allTypes.filter(t => (t.includes('货') || t.includes('牵引')) && t.includes('营业'));
-    } else if (alias.name === '非营业客车') {
-        newSelection = allTypes.filter(t => t.includes('非营业客车'));
-    } else if (alias.name === '家自车') {
-        newSelection = allTypes.filter(t => t.includes('非营业个人'));
-    } else if (alias.name === '不含摩托车') {
+
+    if (combination.name === '货车') {
+      newSelection = [
+        '10吨以上-普货',
+        '10吨以上-牵引',
+        '2-9吨营业货车',
+        '2吨以下营业货车',
+        '9-10吨营业货车',
+        '非营业货车新车',
+        '非营业货车旧车'
+      ].filter(t => allTypes.includes(t));
+    } else if (combination.name === '大货车') {
+      newSelection = [
+        '10吨以上-普货',
+        '10吨以上-牵引',
+        '9-10吨营业货车'
+      ].filter(t => allTypes.includes(t));
+    } else if (combination.name === '小货车') {
+      newSelection = [
+        '非营业货车新车',
+        '2吨以下营业货车',
+        '非营业货车旧车'
+      ].filter(t => allTypes.includes(t));
+    } else if (combination.name === '营业货车') {
+      newSelection = [
+        '2吨以下营业货车',
+        '2-9吨营业货车',
+        '9-10吨营业货车',
+        '10吨以上-普货',
+        '10吨以上-牵引'
+      ].filter(t => allTypes.includes(t));
+    } else if (combination.name === '非营业客车') {
+      newSelection = [
+        '非营业客车旧车非过户',
+        '非营业客车旧车过户车',
+        '非营业客车新车'
+      ].filter(t => allTypes.includes(t));
+    } else if (combination.name === '家自车') {
+      // 根据实际数据，这可能对应的是非营业客车类型
+      newSelection = allTypes.filter(t => t.includes('非营业客车'));
+    } else if (combination.name === '不含摩托车') {
       newSelection = allTypes.filter(t => t !== '摩托车');
     }
-    
+
     setDraftFilters(prev => ({ ...prev, businessTypes: newSelection }));
   };
 
@@ -211,9 +238,9 @@ export function TopFilters({ onApply }: TopFiltersProps) {
             <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">智能切片</p>
                 <div className="flex flex-wrap gap-2">
-                    {businessTypeAliases.map(alias => (
-                    <Button key={alias.name} variant="outline" size="sm" onClick={() => handleBusinessTypeAliasClick(alias.name)}>
-                        {alias.name}
+                    {businessTypeCombinations.map(combination => (
+                    <Button key={combination.name} variant="outline" size="sm" onClick={() => handleBusinessTypeCombinationClick(combination.name)}>
+                        {combination.name}
                     </Button>
                     ))}
                 </div>

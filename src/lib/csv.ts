@@ -85,7 +85,7 @@ export function parseCSV(file: File): Promise<RawDataRow[]> {
       const data: RawDataRow[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',');
-        const rowObject: any = {};
+        const rowObject: Record<string, string | number | null> = {};
         let skipRow = false;
         for (let j = 0; j < header.length; j++) {
             const key = header[j];
@@ -113,7 +113,7 @@ export function parseCSV(file: File): Promise<RawDataRow[]> {
       resolve(data);
     };
 
-    reader.onerror = (e) => {
+    reader.onerror = () => {
       reject(new Error("读取文件时出错。"));
     };
 

@@ -36,43 +36,97 @@ export const kpiMeta: { [key in KPIKey]: { title: string } } = {
 
 
 export const filterOptions: FilterOptions = {
-  years: ['2024', '2023', '2022'],
-  regions: ['成都', '绵阳', '德阳', '南充', '宜宾'],
-  insuranceTypes: ['交强险', '商业险'],
-  businessTypes: ['新车', '转保', '续保', '9吨及以上货车', '2吨及以下货车', '营业货车', '非营业客车', '非营业个人', '摩托车'],
+  years: ['2025', '2024', '2023'],
+  regions: ['天府', '高新', '青羊', '宜宾', '德阳', '新都', '乐山', '金牛', '武侯', '锦江', '成华', '双流', '温江'],
+  insuranceTypes: ['交强险', '商业保险'],
+  businessTypes: [
+    '非营业客车旧车非过户',
+    '非营业货车旧车',
+    '非营业客车旧车过户车',
+    '2吨以下营业货车',
+    '2-9吨营业货车',
+    '10吨以上-牵引',
+    '自卸',
+    '10吨以上-普货',
+    '9-10吨营业货车',
+    '非营业客车新车',
+    '摩托车',
+    '特种车',
+    '非营业货车新车',
+    '其他',
+    '网约车',
+    '出租车'
+  ],
   newEnergyStatus: ['是', '否'],
   weekNumbers: [],
-  transferredStatus: [],
-  coverageTypes: [],
+  transferredStatus: ['是', '否'],
+  coverageTypes: ['交三', '主全', '单交'],
 };
 
-export const businessTypeAliases: BusinessTypeAlias[] = [
+// 业务类型组合规则基于真实数据更新 - 2025-09-26
+export const businessTypeCombinations: BusinessTypeAlias[] = [
     {
         name: '货车',
-        description: '选择所有类型为货车或牵引车的业务',
-        matchFunction: (selected, all) => {
-            const allTrucks = all.filter(t => t.includes('货') || t.includes('牵引'));
-            const selectedTrucks = Array.from(selected).filter(t => t.includes('货') || t.includes('牵引'));
-            return allTrucks.length > 0 && selectedTrucks.length === allTrucks.length && selected.size === allTrucks.length;
+        description: '选择所有货车相关类型',
+        matchFunction: (selected) => {
+            const truckTypes = [
+                '10吨以上-普货',
+                '10吨以上-牵引',
+                '2-9吨营业货车',
+                '2吨以下营业货车',
+                '9-10吨营业货车',
+                '非营业货车新车',
+                '非营业货车旧车'
+            ];
+            const hasTruckTypes = truckTypes.every(type => selected.has(type));
+            return selected.size === truckTypes.length && hasTruckTypes;
         }
     },
     {
         name: '大货车',
-        description: '仅选择“9吨及以上货车”',
-        matchFunction: (selected) => selected.size === 1 && selected.has('9吨及以上货车')
+        description: '选择"10吨以上-普货"、"10吨以上-牵引"、"9-10吨营业货车"',
+        matchFunction: (selected) => {
+            const bigTruckTypes = ['10吨以上-普货', '10吨以上-牵引', '9-10吨营业货车'];
+            const hasBigTruckTypes = bigTruckTypes.every(type => selected.has(type));
+            return selected.size === bigTruckTypes.length && hasBigTruckTypes;
+        }
     },
     {
         name: '小货车',
-        description: '仅选择“2吨及以下货车”',
-        matchFunction: (selected) => selected.size === 1 && selected.has('2吨及以下货车')
+        description: '选择"非营业货车新车"、"2吨以下营业货车"、"非营业货车旧车"',
+        matchFunction: (selected) => {
+            const smallTruckTypes = ['非营业货车新车', '2吨以下营业货车', '非营业货车旧车'];
+            const hasSmallTruckTypes = smallTruckTypes.every(type => selected.has(type));
+            return selected.size === smallTruckTypes.length && hasSmallTruckTypes;
+        }
+    },
+    {
+        name: '非营业客车',
+        description: '选择所有非营业客车类型',
+        matchFunction: (selected) => {
+            const nonCommercialCarTypes = [
+                '非营业客车旧车非过户',
+                '非营业客车旧车过户车',
+                '非营业客车新车非过户',
+                '非营业客车新车过户车'
+            ];
+            const hasCarTypes = nonCommercialCarTypes.every(type => selected.has(type));
+            return selected.size === nonCommercialCarTypes.length && hasCarTypes;
+        }
     },
     {
         name: '营业货车',
-        description: '选择所有类型为营业性质的货车',
-        matchFunction: (selected, all) => {
-             const allCommercialTrucks = all.filter(t => (t.includes('货') || t.includes('牵引')) && t.includes('营业'));
-             const selectedCommercialTrucks = Array.from(selected).filter(t => (t.includes('货') || t.includes('牵引')) && t.includes('营业'));
-             return allCommercialTrucks.length > 0 && selectedCommercialTrucks.length === allCommercialTrucks.length && selected.size === allCommercialTrucks.length;
+        description: '选择所有营业货车类型',
+        matchFunction: (selected) => {
+            const commercialTruckTypes = [
+                '2吨以下营业货车',
+                '2-9吨营业货车',
+                '9-10吨营业货车',
+                '10吨以上-普货',
+                '10吨以上-牵引'
+            ];
+            const hasCommercialTruckTypes = commercialTruckTypes.every(type => selected.has(type));
+            return selected.size === commercialTruckTypes.length && hasCommercialTruckTypes;
         }
     },
     {
