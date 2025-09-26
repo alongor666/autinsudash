@@ -193,7 +193,7 @@ export function FilterSidebar() {
                 </Button>
             </CollapsibleTrigger>
             <CollapsibleContent>
-                <Accordion type="multiple" className="w-full">
+                <Accordion type="multiple" defaultValue={['insuranceTypes', 'newEnergyStatus']} className="w-full">
                     <AccordionItem value="insuranceTypes">
                         <AccordionTrigger>{dimensionLabels['insuranceTypes']}</AccordionTrigger>
                         <AccordionContent className="space-y-2 pt-2">

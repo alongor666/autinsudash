@@ -22,15 +22,15 @@ export function TopFilters() {
   const { filterOptions, filters, setFilters } = useData();
 
   const handleYearChange = (year: string) => {
-    setFilters({ ...filters, year });
+    setFilters({ ...filters, year: year === 'all' ? null : year });
   };
 
   const handleRegionChange = (region: string) => {
-    setFilters({ ...filters, region });
+    setFilters({ ...filters, region: region === 'all' ? null : region });
   };
 
   const handleWeekNumberChange = (week: string) => {
-    setFilters({ ...filters, weekNumber: week });
+    setFilters({ ...filters, weekNumber: week === 'all' ? null : week });
   };
 
   const handleBusinessTypeChange = (type: string, checked: boolean) => {
@@ -44,7 +44,7 @@ export function TopFilters() {
     <div className="flex flex-wrap items-center gap-2 pb-4">
       <div className="flex items-center gap-2">
         <Label>保单年度:</Label>
-        <Select onValueChange={handleYearChange} value={filters.year || ''}>
+        <Select onValueChange={handleYearChange} value={filters.year || 'all'}>
           <SelectTrigger className="w-[120px]" aria-label="按年份筛选">
             <SelectValue placeholder="选择年度" />
           </SelectTrigger>
@@ -60,12 +60,12 @@ export function TopFilters() {
 
        <div className="flex items-center gap-2">
         <Label>周序号:</Label>
-        <Select onValueChange={handleWeekNumberChange} value={filters.weekNumber || ''}>
+        <Select onValueChange={handleWeekNumberChange} value={filters.weekNumber || 'all'}>
           <SelectTrigger className="w-[120px]" aria-label="按周序号筛选">
             <SelectValue placeholder="选择周" />
           </SelectTrigger>
           <SelectContent>
-             <SelectItem value="">全部</SelectItem>
+             <SelectItem value="all">全部</SelectItem>
             {(filterOptions.weekNumbers || []).map((option) => (
               <SelectItem key={option} value={option}>
                 {`第 ${option} 周`}
@@ -77,12 +77,12 @@ export function TopFilters() {
 
       <div className="flex items-center gap-2">
         <Label>三级机构:</Label>
-        <Select onValueChange={handleRegionChange} value={filters.region || ''}>
+        <Select onValueChange={handleRegionChange} value={filters.region || 'all'}>
           <SelectTrigger className="w-[180px]" aria-label="按三级机构筛选">
             <SelectValue placeholder="选择机构" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">全部</SelectItem>
+            <SelectItem value="all">全部</SelectItem>
             <ScrollArea className="h-60">
               {(filterOptions.regions || []).map((option) => (
                 <SelectItem key={option} value={option}>
