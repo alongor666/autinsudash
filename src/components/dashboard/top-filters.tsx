@@ -32,15 +32,6 @@ import { getPredictiveSuggestions } from '@/app/actions';
 import { kpiListForAI } from '@/lib/data';
 import { Badge } from '../ui/badge';
 
-function debounce<T extends (...args: any[]) => void>(func: T, delay: number) {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), delay);
-  };
-}
-
-
 export function TopFilters() {
   const { filterOptions, filters, setFilters, setHighlightedKpis } = useData();
   const [draftFilters, setDraftFilters] = useState<Filters>(filters);
@@ -53,9 +44,8 @@ export function TopFilters() {
   const [aiDraftFilters, setAiDraftFilters] = useState<SuggestedFilter[]>([]);
 
 
-  const handleSearch = async (query: string) => {
-    setSearchInput(query);
-    if (!query) {
+  const handleSearch = async () => {
+    if (!searchInput) {
       setSuggestedFilters([]);
       setHighlightedKpis([]);
       return;
@@ -67,7 +57,7 @@ export function TopFilters() {
       const historicalUserBehavior = "用户经常在查看'北京'地区的'商业险'后，关注'赔付率'和'承保利润率'。";
       
       const result = await getPredictiveSuggestions({
-        searchInput: query,
+        searchInput: searchInput,
         availableFilters,
         kpiList: kpiListForAI,
         historicalUserBehavior,
@@ -86,9 +76,6 @@ export function TopFilters() {
       setIsSearching(false);
     }
   };
-
-  const debouncedSearch = useCallback(debounce(handleSearch, 300), [filterOptions, setHighlightedKpis, toast]);
-
 
   useEffect(() => {
     setDraftFilters(filters);
@@ -311,16 +298,25 @@ export function TopFilters() {
             </div>
             <Separator />
              <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="输入“成都”、“新车”等获取智能建议..."
-                className="pl-8"
+                className="pr-8"
                 value={searchInput}
-                onChange={(e) => debouncedSearch(e.target.value)}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 aria-label="Predictive filter search"
               />
-              {isSearching && <div className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-0 top-0 h-full w-10"
+                onClick={handleSearch}
+                disabled={isSearching}
+                aria-label="Search"
+              >
+                {isSearching ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <Search className="h-4 w-4" />}
+              </Button>
             </div>
             
             {suggestedFilters.length > 0 && (
@@ -444,3 +440,5 @@ export function TopFilters() {
     </div>
   );
 }
+
+    
