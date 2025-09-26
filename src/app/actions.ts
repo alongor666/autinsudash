@@ -15,9 +15,13 @@ export async function getPredictiveSuggestions(searchInput: string) {
             historicalUserBehavior: historicalUserBehaviorForAI,
         };
         const result = await predictiveFilterSuggestions(input);
-        return result;
+        return {
+          suggestedFilters: result.suggestedFilters || [],
+          highlightedKpis: result.highlightedKpis || []
+        };
     } catch (error) {
         console.error("Error getting predictive suggestions:", error);
+        // In case of an error, return empty arrays to avoid breaking the UI.
         return { suggestedFilters: [], highlightedKpis: [] };
     }
 }

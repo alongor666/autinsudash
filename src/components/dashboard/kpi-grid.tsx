@@ -1,5 +1,6 @@
-import { kpiData } from '@/lib/data';
+import { kpiData, kpiMeta } from '@/lib/data';
 import { KpiCard } from './kpi-card';
+import type { KPIKey } from '@/lib/types';
 
 type KpiGridProps = {
   highlightedKpis: string[];
@@ -8,17 +9,21 @@ type KpiGridProps = {
 export function KpiGrid({ highlightedKpis }: KpiGridProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {kpiData.map((kpi) => (
-        <KpiCard
-          key={kpi.title}
-          title={kpi.title}
-          value={kpi.value}
-          change={kpi.change}
-          changeType={kpi.changeType}
-          description={kpi.description}
-          highlighted={highlightedKpis.includes(kpi.title)}
-        />
-      ))}
+      {(Object.keys(kpiData) as KPIKey[]).map((key) => {
+        const kpi = kpiData[key];
+        const meta = kpiMeta[key];
+        return (
+          <KpiCard
+            key={key}
+            title={meta.title}
+            value={kpi.value}
+            change={kpi.change}
+            changeType={kpi.changeType}
+            description={kpi.description}
+            highlighted={highlightedKpis.includes(meta.title)}
+          />
+        );
+      })}
     </div>
   );
 }

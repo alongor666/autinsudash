@@ -1,17 +1,17 @@
 'use client';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Legend } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { chartData } from '@/lib/data';
 
 const chartConfig = {
-  保费: {
-    label: '保费',
+  "总保费": {
+    label: '总保费',
     color: 'hsl(var(--primary))',
   },
-  赔付: {
-    label: '赔付',
-    color: 'hsl(var(--accent))',
+  "赔付额": {
+    label: '赔付额',
+    color: 'hsl(var(--destructive))',
   },
 } satisfies ChartConfig;
 
@@ -19,7 +19,7 @@ export function MainChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>保费与赔付趋势</CardTitle>
+        <CardTitle>核心指标趋势</CardTitle>
         <CardDescription>最近6个月</CardDescription>
       </CardHeader>
       <CardContent>
@@ -41,8 +41,9 @@ export function MainChart() {
               cursor={false}
               content={<ChartTooltipContent indicator="dot" />}
             />
-            <Bar dataKey="保费" fill="var(--color-保费)" radius={4} />
-            <Bar dataKey="赔付" fill="var(--color-赔付)" radius={4} />
+            <Legend />
+            <Bar dataKey="总保费" fill="var(--color-总保费)" radius={4} />
+            <Bar dataKey="赔付额" fill="var(--color-赔付额)" radius={4} />
           </BarChart>
         </ChartContainer>
       </CardContent>

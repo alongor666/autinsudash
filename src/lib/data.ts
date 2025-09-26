@@ -1,59 +1,60 @@
-import type { Kpi, FilterOptions } from './types';
+import type { Kpi, FilterOptions, KPIKey } from './types';
 
-export const kpiData: Kpi[] = [
-  {
-    title: '保费',
-    value: '¥1.2M',
-    change: '+12.5%',
+export const kpiData: { [key in KPIKey]: Omit<Kpi, 'title' | 'id'> } = {
+  totalPremium: {
+    value: '¥0',
+    change: '0%',
     changeType: 'increase',
     description: '与上一周期相比',
   },
-  {
-    title: '赔付率',
-    value: '58.6%',
-    change: '-2.1%',
+  lossRatio: {
+    value: '0%',
+    change: '0%',
     changeType: 'decrease',
     description: '与上一周期相比',
   },
-  {
-    title: '费用率',
-    value: '32.1%',
-    change: '+0.5%',
+  underwritingProfitMargin: {
+    value: '0%',
+    change: '0%',
     changeType: 'increase',
     description: '与上一周期相比',
   },
-  {
-    title: '边际贡献',
-    value: '¥250K',
-    change: '+8.2%',
+  customerCount: {
+    value: '0',
+    change: '0%',
     changeType: 'increase',
     description: '与上一周期相比',
   },
-];
+};
+
+export const kpiMeta: { [key in KPIKey]: { title: string } } = {
+  totalPremium: { title: '总保费' },
+  lossRatio: { title: '赔付率' },
+  underwritingProfitMargin: { title: '承保利润率' },
+  customerCount: { title: '客户数' },
+};
+
 
 export const filterOptions: FilterOptions = {
   years: ['2024', '2023', '2022'],
-  weeks: Array.from({ length: 52 }, (_, i) => `第 ${i + 1} 周`),
-  orgLevels: ['集团', '分公司', '中心支公司', '支公司'],
-  cities: ['北京', '上海', '广州', '深圳', '杭州'],
+  months: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+  quarters: ['Q1', 'Q2', 'Q3', 'Q4'],
+  regions: ['北京', '上海', '广州', '深圳', '杭州'],
   insuranceTypes: ['交强险', '商业险'],
-  policyTypes: ['个人', '团体'],
-  renewalStatus: ['新保', '续保'],
-  vehicleTypes: ['私家车', '货车', '客车'],
 };
 
 export const chartData = [
-  { date: '2024-01', "保费": 200000, "赔付": 120000 },
-  { date: '2024-02', "保费": 220000, "赔付": 130000 },
-  { date: '2024-03', "保费": 250000, "赔付": 140000 },
-  { date: '2024-04', "保费": 230000, "赔付": 150000 },
-  { date: '2024-05', "保费": 280000, "赔付": 160000 },
-  { date: '2024-06', "保费": 300000, "赔付": 170000 },
+  { date: '2024-01', "总保费": 200000, "赔付额": 120000 },
+  { date: '2024-02', "总保费": 220000, "赔付额": 130000 },
+  { date: '2024-03', "总保费": 250000, "赔付额": 140000 },
+  { date: '2024-04', "总保费": 230000, "赔付额": 150000 },
+  { date: '2024-05', "总保费": 280000, "赔付额": 160000 },
+  { date: '2024-06', "总保费": 300000, "赔付额": 170000 },
 ];
 
-export const kpiListForAI = ['保费', '赔付率', '费用率', '边际贡献'];
+export const kpiListForAI = ['总保费', '赔付率', '承保利润率', '客户数'];
 
 // Flatten all filter options into a single array for the AI
 export const availableFiltersForAI = Object.values(filterOptions).flat();
 
-export const historicalUserBehaviorForAI = "用户经常在查看'北京'地区的'商业险'后，关注'赔付率'和'边际贡献'。同时，'续保'状态的'私家车'保单是常见的筛选组合。";
+export const historicalUserBehaviorForAI = "用户经常在查看'北京'地区的'商业险'后，关注'赔付率'和'承保利润率'。";

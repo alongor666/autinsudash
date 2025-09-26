@@ -1,4 +1,7 @@
+export type KPIKey = 'totalPremium' | 'lossRatio' | 'underwritingProfitMargin' | 'customerCount';
+
 export type Kpi = {
+  id: KPIKey;
   title: string;
   value: string;
   change: string;
@@ -8,11 +11,8 @@ export type Kpi = {
 
 export type FilterOptions = {
   years: string[];
-  weeks: string[];
-  orgLevels: string[];
-  cities: string[];
+  months: string[];
+  quarters: string[];
+  regions: string[];
   insuranceTypes: string[];
-  policyTypes: string[];
-  renewalStatus: string[];
-  vehicleTypes: string[];
 };

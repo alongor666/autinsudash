@@ -35,16 +35,27 @@ const predictiveFilterSuggestionsPrompt = ai.definePrompt({
   name: 'predictiveFilterSuggestionsPrompt',
   input: {schema: PredictiveFilterSuggestionsInputSchema},
   output: {schema: PredictiveFilterSuggestionsOutputSchema},
-  prompt: `You are an AI assistant designed to provide filter suggestions and highlight KPIs based on user search input and historical behavior.
+  prompt: `You are an AI assistant for a car insurance dashboard. Your task is to provide filter suggestions and highlight relevant KPIs based on the user's search query and historical behavior.
 
-  The user is typing "{{searchInput}}" in the filter.
-  Available filters are: {{availableFilters}}
-  Available KPIs are: {{kpiList}}
-  Here's a summary of historical user behavior: {{historicalUserBehavior}}
+User's search input: "{{searchInput}}"
 
-  Based on the search input and historical user behavior, suggest relevant filters and highlight KPIs that are likely to be impacted. Only suggest filters from available filters.
-  Return the response in JSON format.
-  `,
+Available filter options:
+{{#each availableFilters}}
+- {{this}}
+{{/each}}
+
+Available KPIs:
+{{#each kpiList}}
+- {{this}}
+{{/each}}
+
+Historical user behavior summary: {{historicalUserBehavior}}
+
+Based on the user's input and past behavior, suggest the most relevant filters and identify which KPIs are likely to be most affected or important to watch.
+
+Only return suggestions from the provided lists of available filters and KPIs.
+Your response must be in JSON format.
+`,
 });
 
 const predictiveFilterSuggestionsFlow = ai.defineFlow(
