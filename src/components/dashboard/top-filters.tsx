@@ -15,6 +15,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import type { Filters } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { businessTypeAliases } from '@/lib/data';
+import { SheetHeader, SheetTitle } from '../ui/sheet';
 
 interface TopFiltersProps {
   onApply: () => void;
@@ -48,19 +49,18 @@ export function TopFilters({ onApply }: TopFiltersProps) {
     const allTypes = filterOptions.businessTypes;
     let newSelection: string[] = [];
     
-    // Updated logic to be more specific
     if (alias.name === '货车') {
       newSelection = allTypes.filter(t => t.includes('货') || t.includes('牵引'));
     } else if (alias.name === '大货车') {
-        newSelection = ['9吨及以上货车'];
+        newSelection = allTypes.filter(t => t.includes('9吨及以上'));
     } else if (alias.name === '小货车') {
-        newSelection = ['2吨及以下货车'];
+        newSelection = allTypes.filter(t => t.includes('2吨及以下'));
     } else if (alias.name === '营业货车') {
       newSelection = allTypes.filter(t => (t.includes('货') || t.includes('牵引')) && t.includes('营业'));
     } else if (alias.name === '非营业客车') {
-        newSelection = ['非营业客车'];
+        newSelection = allTypes.filter(t => t.includes('非营业客车'));
     } else if (alias.name === '家自车') {
-        newSelection = ['非营业个人'];
+        newSelection = allTypes.filter(t => t.includes('非营业个人'));
     } else if (alias.name === '不含摩托车') {
       newSelection = allTypes.filter(t => t !== '摩托车');
     }
@@ -94,6 +94,9 @@ export function TopFilters({ onApply }: TopFiltersProps) {
 
   return (
     <div className="flex h-full flex-col bg-background">
+      <SheetHeader>
+        <SheetTitle className="sr-only">智能筛选</SheetTitle>
+      </SheetHeader>
       <div className="flex items-center justify-between border-b p-4">
         <h3 className="text-lg font-semibold">智能筛选</h3>
         <div className="flex gap-2">
