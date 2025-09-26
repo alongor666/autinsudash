@@ -5,6 +5,9 @@ import { RawDataRow, Filters, FilterOptions, KPIKey, Kpi, ChartDataPoint } from 
 import { kpiData as defaultKpiData, filterOptions as defaultFilterOptions } from '@/lib/data';
 import { calculateKPIs, aggregateChartData } from '@/lib/utils';
 
+// Define a key for localStorage
+const LOCAL_STORAGE_KEY = 'carInsuranceDashboardData';
+
 interface DataContextType {
   rawData: RawDataRow[];
   setRawData: (data: RawDataRow[]) => void;
@@ -21,7 +24,7 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [rawData, setRawData] = useState<RawDataRow[]>([]);
+  const [rawData, setRawDataState] = useState<RawDataRow[]>([]);
   const [filteredData, setFilteredData] = useState<RawDataRow[]>([]);
   const [filters, setFilters] = useState<Filters>({
     year: null,
@@ -36,6 +39,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [kpiData, setKpiData] = useState(defaultKpiData);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [highlightedKpis, setHighlightedKpis] = useState<string[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Load data from localStorage on initial mount
+  useEffect(() => {
+    try {
+      const item = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (item) {
+        const parsedData = JSON.parse(item);
+        if (Array.isArray(parsedData)) {
+           setRawDataState(parsedData);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load data from localStorage", error);
+    }
+    setIsInitialized(true);
+  }, []);
+
+  const setRawData = (data: RawDataRow[]) => {
+    try {
+      window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.error("Failed to save data to localStorage", error);
+    }
+    setRawDataState(data);
+  };
+
 
   const filterOptions = useMemo(() => {
      if (rawData.length === 0) {
@@ -53,6 +83,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [rawData]);
 
   useEffect(() => {
+    if (!isInitialized) return;
+
     const newFilteredData = rawData.filter(row => {
       const yearMatch = !filters.year || row.policy_start_year.toString() === filters.year;
       const regionMatch = !filters.region || row.third_level_organization === filters.region;
@@ -69,16 +101,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setFilteredData(newFilteredData);
     setKpiData(calculateKPIs(newFilteredData));
     setChartData(aggregateChartData(newFilteredData));
-  }, [filters, rawData]);
+  }, [filters, rawData, isInitialized]);
 
    useEffect(() => {
-    if (rawData.length > 0 && filterOptions.years.length > 0) {
+    if (isInitialized && rawData.length > 0 && filterOptions.years.length > 0) {
       const latestYear = filterOptions.years[0];
       if (filters.year !== latestYear) {
          setFilters(f => ({ ...f, year: latestYear, region: null, weekNumber: null, businessTypes: [], insuranceTypes: [], newEnergyStatus: [], transferredStatus: [], coverageTypes: [] }));
       }
     }
-  }, [rawData, filterOptions.years]);
+  }, [rawData, filterOptions.years, isInitialized]);
 
   const value = {
     rawData,
