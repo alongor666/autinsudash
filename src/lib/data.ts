@@ -41,6 +41,9 @@ export const filterOptions: FilterOptions = {
   insuranceTypes: ['交强险', '商业险'],
   businessTypes: ['新车', '转保', '续保'],
   newEnergyStatus: ['是', '否'],
+  weekNumbers: [],
+  transferredStatus: [],
+  coverageTypes: [],
 };
 
 export const chartData = [

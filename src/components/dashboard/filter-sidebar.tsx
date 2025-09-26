@@ -120,6 +120,27 @@ export function FilterSidebar() {
      : draftFilters.newEnergyStatus.filter((s) => s !== status);
     setDraftFilters({ ...draftFilters, newEnergyStatus: newStatus });
  };
+
+ const handleWeekNumberChange = (week: string, checked: boolean) => {
+    const newWeeks = checked
+      ? [...draftFilters.weekNumbers, week]
+      : draftFilters.weekNumbers.filter(w => w !== week);
+    setDraftFilters({ ...draftFilters, weekNumbers: newWeeks });
+  };
+
+  const handleTransferredStatusChange = (status: string, checked: boolean) => {
+    const newStatus = checked
+      ? [...draftFilters.transferredStatus, status]
+      : draftFilters.transferredStatus.filter(s => s !== status);
+    setDraftFilters({ ...draftFilters, transferredStatus: newStatus });
+  };
+
+  const handleCoverageTypeChange = (type: string, checked: boolean) => {
+    const newTypes = checked
+      ? [...draftFilters.coverageTypes, type]
+      : draftFilters.coverageTypes.filter(t => t !== type);
+    setDraftFilters({ ...draftFilters, coverageTypes: newTypes });
+  };
   
   const applyFilters = () => {
     setFilters(draftFilters);
@@ -144,6 +165,9 @@ export function FilterSidebar() {
     insuranceTypes: '车险种类',
     businessTypes: '业务类型',
     newEnergyStatus: '是否新能源车',
+    weekNumbers: '周序号',
+    transferredStatus: '是否过户车',
+    coverageTypes: '险别组合',
   };
 
   const defaultOpen = [
@@ -286,6 +310,63 @@ export function FilterSidebar() {
                     onCheckedChange={(checked) => handleNewEnergyChange(option, !!checked)}
                   />
                   <Label htmlFor={`newEnergyStatus-${option}`} className="font-normal">
+                    {option}
+                  </Label>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="weekNumbers">
+            <AccordionTrigger>{dimensionLabels['weekNumbers']}</AccordionTrigger>
+            <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
+              {filterOptions.weekNumbers.map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`weekNumber-${option}`}
+                    value={option}
+                    checked={draftFilters.weekNumbers.includes(option)}
+                    onCheckedChange={(checked) => handleWeekNumberChange(option, !!checked)}
+                  />
+                  <Label htmlFor={`weekNumber-${option}`} className="font-normal">
+                    {`第 ${option} 周`}
+                  </Label>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="transferredStatus">
+            <AccordionTrigger>{dimensionLabels['transferredStatus']}</AccordionTrigger>
+            <AccordionContent className="space-y-2 pt-2">
+              {filterOptions.transferredStatus.map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`transferredStatus-${option}`}
+                    value={option}
+                    checked={draftFilters.transferredStatus.includes(option)}
+                    onCheckedChange={(checked) => handleTransferredStatusChange(option, !!checked)}
+                  />
+                  <Label htmlFor={`transferredStatus-${option}`} className="font-normal">
+                    {option}
+                  </Label>
+                </div>
+              ))}
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="coverageTypes">
+            <AccordionTrigger>{dimensionLabels['coverageTypes']}</AccordionTrigger>
+            <AccordionContent className="space-y-2 pt-2 max-h-40 overflow-y-auto">
+              {filterOptions.coverageTypes.map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`coverageType-${option}`}
+                    value={option}
+                    checked={draftFilters.coverageTypes.includes(option)}
+                    onCheckedChange={(checked) => handleCoverageTypeChange(option, !!checked)}
+                  />
+                  <Label htmlFor={`coverageType-${option}`} className="font-normal">
                     {option}
                   </Label>
                 </div>

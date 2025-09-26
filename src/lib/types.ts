@@ -15,6 +15,9 @@ export type FilterOptions = {
   insuranceTypes: string[];
   businessTypes: string[];
   newEnergyStatus: string[];
+  weekNumbers: string[];
+  transferredStatus: string[];
+  coverageTypes: string[];
 };
 
 export type Filters = {
@@ -23,6 +26,9 @@ export type Filters = {
   insuranceTypes: string[];
   businessTypes: string[];
   newEnergyStatus: string[];
+  weekNumbers: string[];
+  transferredStatus: string[];
+  coverageTypes: string[];
 }
 
 export type RawDataRow = {
