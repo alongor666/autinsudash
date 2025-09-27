@@ -28,7 +28,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     year: null,
     region: null,
     insuranceTypes: null,
-    businessTypes: null,
+    customerCategories: null,
     newEnergyStatus: null,
     weekNumber: null,
     transferredStatus: null,
@@ -59,7 +59,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setRawDataState(data);
         // Reset filters when new data is loaded to show a complete overview
         setFilters({
-            year: null, region: null, insuranceTypes: null, businessTypes: null,
+            year: null, region: null, insuranceTypes: null, customerCategories: null,
             newEnergyStatus: null, weekNumber: null, transferredStatus: null, coverageTypes: null,
         });
       })
@@ -76,12 +76,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
      const years = [...new Set(rawData.map(row => row.policy_start_year.toString()))].sort((a,b) => b.localeCompare(a));
      const regions = [...new Set(rawData.map(row => row.third_level_organization))].sort();
      const insuranceTypes = [...new Set(rawData.map(row => row.insurance_type))].sort();
-     const businessTypes = [...new Set(rawData.map(row => row.business_type_category))].sort();
+     const customerCategories = [...new Set(rawData.map(row => row.customer_category_3))].sort();
      const newEnergyStatus = [...new Set(rawData.map(row => row.is_new_energy_vehicle))].sort();
      const weekNumbers = [...new Set(rawData.map(row => row.week_number.toString()))].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
      const transferredStatus = [...new Set(rawData.map(row => row.is_transferred_vehicle))].sort();
      const coverageTypes = [...new Set(rawData.map(row => row.coverage_type))].sort();
-     return { years, regions, insuranceTypes, businessTypes, newEnergyStatus, weekNumbers, transferredStatus, coverageTypes };
+     return { years, regions, insuranceTypes, customerCategories, newEnergyStatus, weekNumbers, transferredStatus, coverageTypes };
   }, [rawData]);
 
   useEffect(() => {
@@ -92,19 +92,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       const regionMatch = !filters.region || filters.region.includes(row.third_level_organization);
       const typeMatch = !filters.insuranceTypes || filters.insuranceTypes.includes(row.insurance_type);
-      const businessTypeMatch = !filters.businessTypes || filters.businessTypes.includes(row.business_type_category);
+      const customerCategoryMatch = !filters.customerCategories || filters.customerCategories.includes(row.customer_category_3);
       const newEnergyStatusMatch = !filters.newEnergyStatus || filters.newEnergyStatus.includes(row.is_new_energy_vehicle);
       const transferredStatusMatch = !filters.transferredStatus || filters.transferredStatus.includes(row.is_transferred_vehicle);
       const coverageTypeMatch = !filters.coverageTypes || filters.coverageTypes.includes(row.coverage_type);
 
       if (Array.isArray(filters.region) && filters.region.length === 0) return false;
       if (Array.isArray(filters.insuranceTypes) && filters.insuranceTypes.length === 0) return false;
-      if (Array.isArray(filters.businessTypes) && filters.businessTypes.length === 0) return false;
+      if (Array.isArray(filters.customerCategories) && filters.customerCategories.length === 0) return false;
       if (Array.isArray(filters.newEnergyStatus) && filters.newEnergyStatus.length === 0) return false;
       if (Array.isArray(filters.transferredStatus) && filters.transferredStatus.length === 0) return false;
       if (Array.isArray(filters.coverageTypes) && filters.coverageTypes.length === 0) return false;
 
-      return yearMatch && regionMatch && weekNumberMatch && typeMatch && businessTypeMatch && newEnergyStatusMatch && transferredStatusMatch && coverageTypeMatch;
+      return yearMatch && regionMatch && weekNumberMatch && typeMatch && customerCategoryMatch && newEnergyStatusMatch && transferredStatusMatch && coverageTypeMatch;
     });
 
     setFilteredData(newFilteredData);
@@ -122,12 +122,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
                 const regionMatch = !filters.region || filters.region.includes(row.third_level_organization);
                 const typeMatch = !filters.insuranceTypes || filters.insuranceTypes.includes(row.insurance_type);
-                const businessTypeMatch = !filters.businessTypes || filters.businessTypes.includes(row.business_type_category);
+                const customerCategoryMatch = !filters.customerCategories || filters.customerCategories.includes(row.customer_category_3);
                 const newEnergyStatusMatch = !filters.newEnergyStatus || filters.newEnergyStatus.includes(row.is_new_energy_vehicle);
                 const transferredStatusMatch = !filters.transferredStatus || filters.transferredStatus.includes(row.is_transferred_vehicle);
                 const coverageTypeMatch = !filters.coverageTypes || filters.coverageTypes.includes(row.coverage_type);
                 
-                return yearMatch && weekMatch && regionMatch && typeMatch && businessTypeMatch && newEnergyStatusMatch && transferredStatusMatch && coverageTypeMatch;
+                return yearMatch && weekMatch && regionMatch && typeMatch && customerCategoryMatch && newEnergyStatusMatch && transferredStatusMatch && coverageTypeMatch;
             });
         }
     }

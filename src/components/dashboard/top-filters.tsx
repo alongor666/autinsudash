@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from '../ui/scroll-area';
 import type { Filters } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { businessTypeCombinations } from '@/lib/data';
+import { customerCategoryCombinations } from '@/lib/data';
 import { SheetHeader, SheetTitle } from '../ui/sheet';
 
 interface TopFiltersProps {
@@ -51,57 +51,34 @@ export function TopFilters({ onApply }: TopFiltersProps) {
   };
 
 
-  const handleBusinessTypeCombinationClick = (combinationName: string) => {
-    const combination = businessTypeCombinations.find(c => c.name === combinationName);
+  const handleCustomerCategoryCombinationClick = (combinationName: string) => {
+    const combination = customerCategoryCombinations.find(c => c.name === combinationName);
     if (!combination) return;
 
-    const allTypes = filterOptions.businessTypes;
+    const allCategories = filterOptions.customerCategories;
     let newSelection: string[] = [];
 
-    if (combination.name === '货车') {
-      newSelection = [
-        '10吨以上-普货',
-        '10吨以上-牵引',
-        '2-9吨营业货车',
-        '2吨以下营业货车',
-        '9-10吨营业货车',
-        '非营业货车新车',
-        '非营业货车旧车'
-      ].filter(t => allTypes.includes(t));
-    } else if (combination.name === '大货车') {
-      newSelection = [
-        '10吨以上-普货',
-        '10吨以上-牵引',
-        '9-10吨营业货车'
-      ].filter(t => allTypes.includes(t));
-    } else if (combination.name === '小货车') {
-      newSelection = [
-        '非营业货车新车',
-        '2吨以下营业货车',
-        '非营业货车旧车'
-      ].filter(t => allTypes.includes(t));
-    } else if (combination.name === '营业货车') {
-      newSelection = [
-        '2吨以下营业货车',
-        '2-9吨营业货车',
-        '9-10吨营业货车',
-        '10吨以上-普货',
-        '10吨以上-牵引'
-      ].filter(t => allTypes.includes(t));
-    } else if (combination.name === '非营业客车') {
-      newSelection = [
-        '非营业客车旧车非过户',
-        '非营业客车旧车过户车',
-        '非营业客车新车'
-      ].filter(t => allTypes.includes(t));
-    } else if (combination.name === '家自车') {
-      // 根据实际数据，这可能对应的是非营业客车类型
-      newSelection = allTypes.filter(t => t.includes('非营业客车'));
+    if (combination.name === '私家车') {
+      newSelection = ['非营业个人客车'].filter(c => allCategories.includes(c));
+    } else if (combination.name === '单位客车') {
+      newSelection = ['非营业企业客车', '非营业机关客车'].filter(c => allCategories.includes(c));
+    } else if (combination.name === '非营客车组合') {
+      newSelection = ['非营业个人客车', '非营业企业客车', '非营业机关客车'].filter(c => allCategories.includes(c));
+    } else if (combination.name === '营业客运') {
+      newSelection = ['营业城市公交', '营业公路客运', '营业出租租赁'].filter(c => allCategories.includes(c));
+    } else if (combination.name === '货运车辆') {
+      newSelection = ['营业货车', '挂车'].filter(c => allCategories.includes(c));
+    } else if (combination.name === '非营货车') {
+      newSelection = ['非营业货车'].filter(c => allCategories.includes(c));
+    } else if (combination.name === '特种车辆') {
+      newSelection = ['特种车'].filter(c => allCategories.includes(c));
+    } else if (combination.name === '摩托车业务') {
+      newSelection = ['摩托车'].filter(c => allCategories.includes(c));
     } else if (combination.name === '不含摩托车') {
-      newSelection = allTypes.filter(t => t !== '摩托车');
+      newSelection = allCategories.filter(c => c !== '摩托车');
     }
 
-    setDraftFilters(prev => ({ ...prev, businessTypes: newSelection }));
+    setDraftFilters(prev => ({ ...prev, customerCategories: newSelection }));
   };
 
 
@@ -119,7 +96,7 @@ export function TopFilters({ onApply }: TopFiltersProps) {
         year: filterOptions.years[0] || null,
         region: null,
         weekNumber: null,
-        businessTypes: null,
+        customerCategories: null,
         insuranceTypes: null,
         newEnergyStatus: null,
         transferredStatus: null,
@@ -234,22 +211,22 @@ export function TopFilters({ onApply }: TopFiltersProps) {
            </div>
           {/* Column 3: Business Types */}
           <div className="space-y-2 flex flex-col">
-            <Label>业务类型</Label>
+            <Label>客户类别</Label>
             <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">智能切片</p>
                 <div className="flex flex-wrap gap-2">
-                    {businessTypeCombinations.map(combination => (
-                    <Button key={combination.name} variant="outline" size="sm" onClick={() => handleBusinessTypeCombinationClick(combination.name)}>
+                    {customerCategoryCombinations.map(combination => (
+                    <Button key={combination.name} variant="outline" size="sm" onClick={() => handleCustomerCategoryCombinationClick(combination.name)}>
                         {combination.name}
                     </Button>
                     ))}
                 </div>
             </div>
             <ScrollArea className="flex-1 rounded-md border p-2">
-            {(filterOptions.businessTypes || []).map((option) => (
+            {(filterOptions.customerCategories || []).map((option) => (
                 <div key={option} className="flex items-center space-x-2 p-1">
-                <Checkbox id={`bt-${option}`} checked={draftFilters.businessTypes === null || draftFilters.businessTypes.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('businessTypes', option, !!c)} />
-                <Label htmlFor={`bt-${option}`} className="font-normal">{option}</Label>
+                <Checkbox id={`cc-${option}`} checked={draftFilters.customerCategories === null || draftFilters.customerCategories.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('customerCategories', option, !!c)} />
+                <Label htmlFor={`cc-${option}`} className="font-normal">{option}</Label>
                 </div>
             ))}
             </ScrollArea>
