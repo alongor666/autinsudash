@@ -1,4 +1,4 @@
-import type { Kpi, FilterOptions, KPIKey, BusinessTypeAlias } from './types';
+import type { Kpi, FilterOptions, KPIKey, CustomerCategoryAlias } from './types';
 
 export const kpiData: { [key in KPIKey]: Omit<Kpi, 'title' | 'id'> } = {
   signedPremium: {
@@ -39,23 +39,18 @@ export const filterOptions: FilterOptions = {
   years: ['2025', '2024', '2023'],
   regions: ['天府', '高新', '青羊', '宜宾', '德阳', '新都', '乐山', '金牛', '武侯', '锦江', '成华', '双流', '温江'],
   insuranceTypes: ['交强险', '商业保险'],
-  businessTypes: [
-    '非营业客车旧车非过户',
-    '非营业货车旧车',
-    '非营业客车旧车过户车',
-    '2吨以下营业货车',
-    '2-9吨营业货车',
-    '10吨以上-牵引',
-    '自卸',
-    '10吨以上-普货',
-    '9-10吨营业货车',
-    '非营业客车新车',
-    '摩托车',
+  customerCategories: [
+    '非营业个人客车',
+    '非营业企业客车',
+    '非营业机关客车',
+    '营业货车',
+    '非营业货车',
+    '营业出租租赁',
+    '营业公路客运',
+    '营业城市公交',
+    '挂车',
     '特种车',
-    '非营业货车新车',
-    '其他',
-    '网约车',
-    '出租车'
+    '摩托车',
   ],
   newEnergyStatus: ['是', '否'],
   weekNumbers: [],
@@ -63,89 +58,70 @@ export const filterOptions: FilterOptions = {
   coverageTypes: ['交三', '主全', '单交'],
 };
 
-// 业务类型组合规则基于真实数据更新 - 2025-09-26
-export const businessTypeCombinations: BusinessTypeAlias[] = [
+// 客户类别组合规则 - 基于 2025年第38周数据快照
+export const customerCategoryCombinations: CustomerCategoryAlias[] = [
     {
-        name: '货车',
-        description: '选择所有货车相关类型',
+        name: '私家车',
+        description: '仅选择“非营业个人客车”',
+        matchFunction: (selected) => selected.size === 1 && selected.has('非营业个人客车')
+    },
+    {
+        name: '单位客车',
+        description: '选择“非营业企业客车”与/或“非营业机关客车”',
         matchFunction: (selected) => {
-            const truckTypes = [
-                '10吨以上-普货',
-                '10吨以上-牵引',
-                '2-9吨营业货车',
-                '2吨以下营业货车',
-                '9-10吨营业货车',
-                '非营业货车新车',
-                '非营业货车旧车'
-            ];
-            const hasTruckTypes = truckTypes.every(type => selected.has(type));
-            return selected.size === truckTypes.length && hasTruckTypes;
+            const target = ['非营业企业客车', '非营业机关客车'];
+            const isSubset = Array.from(selected).every(item => target.includes(item));
+            return selected.size > 0 && isSubset;
         }
     },
     {
-        name: '大货车',
-        description: '选择"10吨以上-普货"、"10吨以上-牵引"、"9-10吨营业货车"',
+        name: '非营客车组合',
+        description: '同时选择所有非营业客车（个人、企业、机关）',
         matchFunction: (selected) => {
-            const bigTruckTypes = ['10吨以上-普货', '10吨以上-牵引', '9-10吨营业货车'];
-            const hasBigTruckTypes = bigTruckTypes.every(type => selected.has(type));
-            return selected.size === bigTruckTypes.length && hasBigTruckTypes;
+            const nonCommercial = ['非营业个人客车', '非营业企业客车', '非营业机关客车'];
+            const hasAll = nonCommercial.every(item => selected.has(item));
+            return selected.size === nonCommercial.length && hasAll;
         }
     },
     {
-        name: '小货车',
-        description: '选择"非营业货车新车"、"2吨以下营业货车"、"非营业货车旧车"',
+        name: '营业客运',
+        description: '包含城市公交、公路客运或出租租赁任意组合',
         matchFunction: (selected) => {
-            const smallTruckTypes = ['非营业货车新车', '2吨以下营业货车', '非营业货车旧车'];
-            const hasSmallTruckTypes = smallTruckTypes.every(type => selected.has(type));
-            return selected.size === smallTruckTypes.length && hasSmallTruckTypes;
+            const passenger = ['营业城市公交', '营业公路客运', '营业出租租赁'];
+            const allSelected = Array.from(selected).every(item => passenger.includes(item));
+            return selected.size > 0 && allSelected;
         }
     },
     {
-        name: '非营业客车',
-        description: '选择所有非营业客车类型',
+        name: '货运车辆',
+        description: '选择“营业货车”和/或“挂车”',
         matchFunction: (selected) => {
-            const nonCommercialCarTypes = [
-                '非营业客车旧车非过户',
-                '非营业客车旧车过户车',
-                '非营业客车新车非过户',
-                '非营业客车新车过户车'
-            ];
-            const hasCarTypes = nonCommercialCarTypes.every(type => selected.has(type));
-            return selected.size === nonCommercialCarTypes.length && hasCarTypes;
+            const freight = ['营业货车', '挂车'];
+            const allFreight = Array.from(selected).every(item => freight.includes(item));
+            return selected.size > 0 && allFreight;
         }
     },
     {
-        name: '营业货车',
-        description: '选择所有营业货车类型',
-        matchFunction: (selected) => {
-            const commercialTruckTypes = [
-                '2吨以下营业货车',
-                '2-9吨营业货车',
-                '9-10吨营业货车',
-                '10吨以上-普货',
-                '10吨以上-牵引'
-            ];
-            const hasCommercialTruckTypes = commercialTruckTypes.every(type => selected.has(type));
-            return selected.size === commercialTruckTypes.length && hasCommercialTruckTypes;
-        }
+        name: '非营货车',
+        description: '仅选择“非营业货车”',
+        matchFunction: (selected) => selected.size === 1 && selected.has('非营业货车')
     },
     {
-        name: '非营业客车',
-        description: '仅选择“非营业客车”',
-        matchFunction: (selected) => selected.size === 1 && selected.has('非营业客车')
+        name: '特种车辆',
+        description: '仅选择“特种车”',
+        matchFunction: (selected) => selected.size === 1 && selected.has('特种车')
     },
     {
-        name: '家自车',
-        description: '仅选择“非营业个人”',
-        matchFunction: (selected) => selected.size === 1 && selected.has('非营业个人')
+        name: '摩托车业务',
+        description: '仅选择“摩托车”',
+        matchFunction: (selected) => selected.size === 1 && selected.has('摩托车')
     },
     {
         name: '不含摩托车',
-        description: '选择了除“摩托车”以外的所有业务类型',
+        description: '选择除“摩托车”以外的所有客户类别',
         matchFunction: (selected, all) => {
-            const hasMotorcycle = selected.has('摩托车');
-            const allWithoutMotorcycle = all.filter(t => t !== '摩托车');
-            return !hasMotorcycle && selected.size === allWithoutMotorcycle.length;
+            const withoutMotorcycle = all.filter(item => item !== '摩托车');
+            return !selected.has('摩托车') && selected.size === withoutMotorcycle.length;
         }
     }
 ];

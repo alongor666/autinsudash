@@ -13,26 +13,26 @@ export type FilterOptions = {
   years: string[];
   regions: string[];
   insuranceTypes: string[];
-  businessTypes: string[];
+  customerCategories: string[];
   newEnergyStatus: string[];
   weekNumbers: string[];
   transferredStatus: string[];
   coverageTypes: string[];
 };
 
-export type BusinessTypeAlias = {
+export type CustomerCategoryAlias = {
     name: string;
     description: string;
-    // A function that takes the set of selected business types and all available business types,
+    // A function that takes the set of selected customer categories and all available customer categories,
     // and returns true if the selection matches the alias rule.
-    matchFunction: (selectedTypes: Set<string>, allTypes: string[]) => boolean;
+    matchFunction: (selectedCategories: Set<string>, allCategories: string[]) => boolean;
 }
 
 export type Filters = {
   year: string | null;
   region: string[] | null;
   weekNumber: string | null;
-  businessTypes: string[] | null;
+  customerCategories: string[] | null;
   insuranceTypes: string[] | null;
   newEnergyStatus: string[] | null;
   transferredStatus: string[] | null;
@@ -40,7 +40,7 @@ export type Filters = {
 }
 
 export type SuggestedFilter = {
-    dimension: keyof Omit<Filters, 'businessTypes' | 'insuranceTypes' | 'newEnergyStatus' | 'transferredStatus' | 'coverageTypes'> | 'business_type_category' | 'insurance_type' | 'is_new_energy_vehicle' | 'is_transferred_vehicle' | 'coverage_type';
+    dimension: keyof Omit<Filters, 'customerCategories' | 'insuranceTypes' | 'newEnergyStatus' | 'transferredStatus' | 'coverageTypes'> | 'customer_category_3' | 'insurance_type' | 'is_new_energy_vehicle' | 'is_transferred_vehicle' | 'coverage_type';
     value: string;
 }
 

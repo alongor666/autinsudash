@@ -3,49 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>业务类型组合测试</title>
+    <title>客户类别组合测试</title>
 </head>
 <body>
-    <h1>业务类型组合测试</h1>
+    <h1>客户类别组合测试</h1>
     <div id="test-results"></div>
 
     <script>
-        // 模拟业务类型组合配置
-        const businessTypeCombinations = [
+        // 模拟客户类别组合配置
+        const customerCategoryCombinations = [
             {
-                name: '货车',
-                description: '选择所有货车相关类型',
+                name: '私家车',
+                description: '仅选择“非营业个人客车”',
+                matchFunction: (selected) => selected.size === 1 && selected.has('非营业个人客车')
+            },
+            {
+                name: '单位客车',
+                description: '选择“非营业企业客车”与/或“非营业机关客车”',
                 matchFunction: (selected) => {
-                    const truckTypes = [
-                        '10吨以上-普货',
-                        '10吨以上-牵引',
-                        '2-9吨营业货车',
-                        '2吨以下营业货车',
-                        '9-10吨营业货车',
-                        '其他',
-                        '非营业货车新车',
-                        '非营业货车旧车'
-                    ];
-                    const hasTruckTypes = truckTypes.every(type => selected.has(type));
-                    return selected.size === truckTypes.length && hasTruckTypes;
+                    const target = ['非营业企业客车', '非营业机关客车'];
+                    return selected.size > 0 && Array.from(selected).every(item => target.includes(item));
                 }
             },
             {
-                name: '大货车',
-                description: '选择"10吨以上-普货"、"10吨以上-牵引"、"9-10吨营业货车"',
+                name: '非营客车组合',
+                description: '同时选择所有非营业客车（个人、企业、机关）',
                 matchFunction: (selected) => {
-                    const bigTruckTypes = ['10吨以上-普货', '10吨以上-牵引', '9-10吨营业货车'];
-                    const hasBigTruckTypes = bigTruckTypes.every(type => selected.has(type));
-                    return selected.size === bigTruckTypes.length && hasBigTruckTypes;
-                }
-            },
-            {
-                name: '小货车',
-                description: '选择"非营业货车新车"、"2吨以下营业货车"、"非营业货车旧车"',
-                matchFunction: (selected) => {
-                    const smallTruckTypes = ['非营业货车新车', '2吨以下营业货车', '非营业货车旧车'];
-                    const hasSmallTruckTypes = smallTruckTypes.every(type => selected.has(type));
-                    return selected.size === smallTruckTypes.length && hasSmallTruckTypes;
+                    const nonCommercial = ['非营业个人客车', '非营业企业客车', '非营业机关客车'];
+                    const hasAll = nonCommercial.every(item => selected.has(item));
+                    return selected.size === nonCommercial.length && hasAll;
                 }
             }
         ];
@@ -53,28 +39,19 @@
         // 测试用例
         const testCases = [
             {
-                name: '大货车测试',
-                selectedTypes: ['10吨以上-普货', '10吨以上-牵引', '9-10吨营业货车'],
-                expectedAlias: '大货车'
+                name: '私家车测试',
+                selectedTypes: ['非营业个人客车'],
+                expectedAlias: '私家车'
             },
             {
-                name: '小货车测试',
-                selectedTypes: ['非营业货车新车', '2吨以下营业货车', '非营业货车旧车'],
-                expectedAlias: '小货车'
+                name: '单位客车测试',
+                selectedTypes: ['非营业企业客车', '非营业机关客车'],
+                expectedAlias: '单位客车'
             },
             {
-                name: '货车测试',
-                selectedTypes: [
-                    '10吨以上-普货',
-                    '10吨以上-牵引',
-                    '2-9吨营业货车',
-                    '2吨以下营业货车',
-                    '9-10吨营业货车',
-                    '其他',
-                    '非营业货车新车',
-                    '非营业货车旧车'
-                ],
-                expectedAlias: '货车'
+                name: '非营客车组合测试',
+                selectedTypes: ['非营业个人客车', '非营业企业客车', '非营业机关客车'],
+                expectedAlias: '非营客车组合'
             }
         ];
 
@@ -87,7 +64,7 @@
                 const selectedSet = new Set(testCase.selectedTypes);
                 let matchedAlias = null;
 
-                for (const combination of businessTypeCombinations) {
+                for (const combination of customerCategoryCombinations) {
                     if (combination.matchFunction(selectedSet)) {
                         matchedAlias = combination.name;
                         break;
@@ -98,7 +75,7 @@
                 html += `
                     <div style="margin: 10px 0; padding: 10px; border: 1px solid ${passed ? 'green' : 'red'}; background: ${passed ? '#e8f5e8' : '#ffe8e8'};">
                         <h3>${testCase.name}</h3>
-                        <p><strong>选择类型:</strong> ${testCase.selectedTypes.join(', ')}</p>
+                        <p><strong>选择类别:</strong> ${testCase.selectedTypes.join(', ')}</p>
                         <p><strong>期望组合:</strong> ${testCase.expectedAlias}</p>
                         <p><strong>实际组合:</strong> ${matchedAlias || '无匹配'}</p>
                         <p><strong>测试结果:</strong> ${passed ? '✅ 通过' : '❌ 失败'}</p>
