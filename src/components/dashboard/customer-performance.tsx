@@ -486,7 +486,7 @@ function hasDimensionData(rows: RawDataRow[], key: DimensionKey) {
   if (!keyExists) {
     return false;
   }
-  return rows.some((row) => {
+  const hasValidValue = rows.some((row) => {
     const rawValue = getRawDimensionValue(row, key);
     if (rawValue === null || rawValue === undefined) {
       return false;
@@ -496,6 +496,10 @@ function hasDimensionData(rows: RawDataRow[], key: DimensionKey) {
     }
     return true;
   });
+  if (!hasValidValue && shouldSkipMissingDimension(key)) {
+    return true;
+  }
+  return hasValidValue;
 }
 
 function formatValue(value: number) {
