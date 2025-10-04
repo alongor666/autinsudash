@@ -22,7 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useData } from "@/contexts/data-context";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { getExpenseContributionColor, getMarginalContributionColor } from "@/lib/color-scale";
@@ -123,6 +123,29 @@ const dimensionConfigs: { value: DimensionKey; label: string }[] = [
 const dimensionOptions = dimensionConfigs;
 
 const expenseDimensionOptions = dimensionConfigs;
+
+const dimensionGroups: { label: string; values: DimensionKey[] }[] = [
+  {
+    label: "客户结构",
+    values: ["customer_category_3", "renewal_status", "is_transferred_vehicle"],
+  },
+  {
+    label: "机构与渠道",
+    values: ["chengdu_branch", "third_level_organization", "terminal_source"],
+  },
+  {
+    label: "业务类型",
+    values: ["business_type_category", "insurance_type", "coverage_type"],
+  },
+  {
+    label: "车辆属性",
+    values: ["is_new_energy_vehicle", "vehicle_insurance_grade"],
+  },
+  {
+    label: "风险评分",
+    values: ["large_truck_score", "small_truck_score"],
+  },
+];
 
 const metricDefinitions: MetricDefinition[] = [
   {
@@ -459,13 +482,17 @@ function getDimensionValue(row: RawDataRow, key: DimensionKey) {
 }
 
 function hasDimensionData(rows: RawDataRow[], key: DimensionKey) {
+  const keyExists = rows.some((row) => Object.prototype.hasOwnProperty.call(row, key));
+  if (!keyExists) {
+    return false;
+  }
   return rows.some((row) => {
     const rawValue = getRawDimensionValue(row, key);
     if (rawValue === null || rawValue === undefined) {
       return false;
     }
     if (typeof rawValue === "string") {
-      return rawValue.trim() !== "" && rawValue !== "未填写";
+      return rawValue.trim() !== "";
     }
     return true;
   });
@@ -607,6 +634,34 @@ export function CustomerPerformanceCharts() {
     const options = expenseDimensionOptions.filter((option) => hasDimensionData(datasetForOptions, option.value));
     return options.length ? options : expenseDimensionOptions;
   }, [datasetForOptions]);
+
+  const groupedDimensionOptions = useMemo(() => {
+    const availableSet = new Set(availableDimensionOptions.map((option) => option.value));
+    return dimensionGroups
+      .map((group) => ({
+        label: group.label,
+        options: group.values
+          .map((value) => dimensionConfigs.find((config) => config.value === value))
+          .filter((option): option is { value: DimensionKey; label: string } =>
+            Boolean(option) && availableSet.has(option.value),
+          ),
+      }))
+      .filter((group) => group.options.length > 0);
+  }, [availableDimensionOptions]);
+
+  const groupedExpenseOptions = useMemo(() => {
+    const availableSet = new Set(availableExpenseOptions.map((option) => option.value));
+    return dimensionGroups
+      .map((group) => ({
+        label: group.label,
+        options: group.values
+          .map((value) => dimensionConfigs.find((config) => config.value === value))
+          .filter((option): option is { value: DimensionKey; label: string } =>
+            Boolean(option) && availableSet.has(option.value),
+          ),
+      }))
+      .filter((group) => group.options.length > 0);
+  }, [availableExpenseOptions]);
 
   useEffect(() => {
     if (availableDimensionOptions.length === 0) {
