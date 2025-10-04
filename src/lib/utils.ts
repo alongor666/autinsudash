@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { RawDataRow, Kpi, KPIKey, ChartDataPoint } from './types';
+import type { RawDataRow, Kpi, KPIKey, ChartDataPoint, Filters } from './types';
 import { kpiData as defaultKpiData } from './data';
 
 export function cn(...inputs: ClassValue[]) {
@@ -9,16 +9,11 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatCurrency(value: number, unit: 'yuan' | 'ten_thousand' = 'ten_thousand') {
   const valueInUnit = unit === 'yuan' ? value : value / 10000;
-  return new Intl.NumberFormat('zh-CN', {
-    style: 'currency',
-    currency: 'CNY',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(valueInUnit).replace('¥', '¥ ');
+  return Math.round(valueInUnit).toLocaleString('zh-CN');
 }
 
 export function formatPercentage(value: number) {
-  return `${(value * 100).toFixed(2)}%`;
+  return `${(value * 100).toFixed(1)}%`;
 }
 
 function calculateMetrics(data: RawDataRow[]) {
@@ -79,19 +74,19 @@ export function calculateKPIs(currentData: RawDataRow[], previousData: RawDataRo
     },
     maturedLossRatio: {
       value: formatPercentage(currentMetrics.maturedLossRatio),
-      change: `${(maturedLossRatioChange * 100).toFixed(2)}pp`,
+      change: `${(maturedLossRatioChange * 100).toFixed(1)}pp`,
       changeType: maturedLossRatioChange >= 0 ? 'increase' : 'decrease',
       description: '较上周',
     },
     expenseRatio: {
       value: formatPercentage(currentMetrics.expenseRatio),
-      change: `${(expenseRatioChange * 100).toFixed(2)}pp`,
+      change: `${(expenseRatioChange * 100).toFixed(1)}pp`,
       changeType: expenseRatioChange >= 0 ? 'increase' : 'decrease',
       description: '较上周',
     },
     maturedMarginalContributionRate: {
       value: formatPercentage(currentMetrics.maturedMarginalContributionRate),
-      change: `${(maturedMarginalContributionRateChange * 100).toFixed(2)}pp`,
+      change: `${(maturedMarginalContributionRateChange * 100).toFixed(1)}pp`,
       changeType: maturedMarginalContributionRateChange >= 0 ? 'increase' : 'decrease',
       description: '较上周',
     },
@@ -115,4 +110,27 @@ export function aggregateChartData(data: RawDataRow[]): ChartDataPoint[] {
       ...values,
     }))
     .sort((a, b) => a.week_number - b.week_number);
+}
+
+export function formatFilterContext(filters: Filters) {
+  const region = filters.region ?? '四川分公司';
+  const parts: string[] = [];
+
+  if (filters.year) {
+    parts.push(`${filters.year}年`);
+  }
+
+  if (filters.weekNumber) {
+    parts.push(`第${filters.weekNumber}周`);
+  }
+
+  if (filters.customerCategories && filters.customerCategories.length) {
+    const categories = filters.customerCategories;
+    const preview = categories.slice(0, 2).join('、');
+    const suffix = categories.length > 2 ? '等' : '';
+    parts.push(`${preview}${suffix}`);
+  }
+
+  const summary = parts.join(' ');
+  return summary ? `${region} ${summary}` : `${region} 全量`;
 }

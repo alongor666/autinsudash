@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { DashboardHeader } from '@/components/dashboard/header';
 import { KpiGrid } from '@/components/dashboard/kpi-grid';
 import { MainChart } from '@/components/dashboard/main-chart';
+import { CustomerPerformanceCharts } from '@/components/dashboard/customer-performance';
 import { DataProvider } from '@/contexts/data-context';
 import { FilterSummary, FilterSummaryTitle } from '@/components/dashboard/filter-summary';
 import { TopFilters } from '@/components/dashboard/top-filters';
@@ -71,11 +72,11 @@ function PageActions() {
   };
 
   return (
-    <div className="flex items-center justify-end gap-2">
+    <div className="flex flex-wrap items-center justify-center gap-3 md:justify-end">
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Filter className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" className="shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+            <Filter className="mr-2 h-[18px] w-[18px]" />
             智能筛选
           </Button>
         </SheetTrigger>
@@ -91,24 +92,20 @@ function PageActions() {
         accept=".csv"
         onChange={handleFileUpload}
       />
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => document.getElementById('csv-upload')?.click()}
-      >
-        <Upload className="mr-2 h-4 w-4" />
+      <Button variant="outline" size="sm" onClick={() => document.getElementById('csv-upload')?.click()}>
+        <Upload className="mr-2 h-[18px] w-[18px]" />
         导入 CSV
       </Button>
       <Button variant="outline" size="sm" onClick={handleExport}>
-        <Download className="mr-2 h-4 w-4" />
+        <Download className="mr-2 h-[18px] w-[18px]" />
         导出
       </Button>
-      <Button variant="ghost" size="icon" className="rounded-full">
-        <Bell className="h-5 w-5" />
+      <Button variant="ghost" size="icon">
+        <Bell className="h-[18px] w-[18px]" />
         <span className="sr-only">通知</span>
       </Button>
-      <Button variant="ghost" size="icon" className="rounded-full">
-        <Settings className="h-5 w-5" />
+      <Button variant="ghost" size="icon">
+        <Settings className="h-[18px] w-[18px]" />
         <span className="sr-only">设置</span>
       </Button>
     </div>
@@ -120,18 +117,29 @@ export default function DashboardPage() {
     <DataProvider>
       <div className="flex min-h-screen w-full flex-col">
         <DashboardHeader />
-        <main className="flex-1 space-y-4 p-4 md:p-6">
-          <div className="text-center mb-4">
-            <FilterSummaryTitle />
-          </div>
-          <div className="flex items-center justify-between mb-4">
-            <FilterSummary />
-            <PageActions />
-          </div>
-          <KpiGrid />
-          <div className="grid gap-4 md:grid-cols-1">
-            <MainChart />
-          </div>
+        <main className="flex-1">
+          <section className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 pb-16 pt-12 md:px-8">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <FilterSummaryTitle />
+              <p className="max-w-2xl text-base text-muted-foreground/80 md:text-lg">
+                以苹果官网的极简视觉重塑车险经营仪表板，沉浸式呈现最新周度表现、客户结构与费用效率。
+              </p>
+              <FilterSummary />
+            </div>
+
+            <div className="flex flex-col items-center justify-center gap-4 md:flex-row md:justify-between">
+              <div className="text-sm text-muted-foreground/70 md:text-left">
+                精准筛选、导入和导出保持不变，帮助你在高保真体验中快速聚焦关键洞察。
+              </div>
+              <PageActions />
+            </div>
+
+            <KpiGrid />
+            <div className="grid gap-8">
+              <MainChart />
+              <CustomerPerformanceCharts />
+            </div>
+          </section>
         </main>
       </div>
     </DataProvider>
