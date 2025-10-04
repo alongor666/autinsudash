@@ -1331,10 +1331,15 @@ export function CustomerPerformanceCharts() {
                   <SelectValue placeholder="选择维度" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableDimensionOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
+                  {groupedDimensionOptions.map((group) => (
+                    <SelectGroup key={group.label}>
+                      <SelectLabel>{group.label}</SelectLabel>
+                      {group.options.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   ))}
                 </SelectContent>
               </Select>
@@ -1435,10 +1440,15 @@ export function CustomerPerformanceCharts() {
                   <SelectValue placeholder="选择维度" />
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {availableExpenseOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
+                  {groupedExpenseOptions.map((group) => (
+                    <SelectGroup key={group.label}>
+                      <SelectLabel>{group.label}</SelectLabel>
+                      {group.options.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   ))}
                 </SelectContent>
               </Select>
