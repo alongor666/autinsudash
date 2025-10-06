@@ -268,6 +268,31 @@ export function formatFilterContext(filters: Filters) {
  * - 列表项（以 1. 2. - • 开头的行）
  * - 单个换行符转为 <br>
  */
+/**
+ * 根据周序号计算对应的统计截止日期（周六）
+ * @param year - 年份
+ * @param weekNumber - 周序号（1-52）
+ * @returns 格式化的日期字符串，如 "2025年10月4日"
+ */
+export function getWeekEndDate(year: number, weekNumber: number): string {
+  // ISO 8601 标准：一年的第一周是包含该年第一个星期四的那一周
+  // 计算该年第一周的起始日期（周一）
+  const jan4 = new Date(year, 0, 4); // 1月4日必定在第一周
+  const jan4DayOfWeek = jan4.getDay() || 7; // 周日为0，转为7
+  const firstMonday = new Date(jan4);
+  firstMonday.setDate(jan4.getDate() - jan4DayOfWeek + 1);
+
+  // 计算目标周的周六（统计截止日期）
+  const targetSaturday = new Date(firstMonday);
+  targetSaturday.setDate(firstMonday.getDate() + (weekNumber - 1) * 7 + 5); // +5 天到周六
+
+  const month = targetSaturday.getMonth() + 1;
+  const day = targetSaturday.getDate();
+  const displayYear = targetSaturday.getFullYear();
+
+  return `${displayYear}年${month}月${day}日`;
+}
+
 export function convertTextToHtml(text: string): string {
   if (!text) return '';
 

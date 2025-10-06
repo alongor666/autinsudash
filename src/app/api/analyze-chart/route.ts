@@ -21,31 +21,82 @@ type ExpenseAnalysisDatum = {
   deltaRate: number;
 };
 
-type DrilldownDatum = {
-  category: string;
-  value: number;
-  marginalRate: number;
-  breakdown?: Record<string, { value: number; marginalRate: number }>;
-};
 
 type AnalysisData =
   | SunburstAnalysisDatum[]
   | BarAnalysisDatum[]
   | ExpenseAnalysisDatum[]
-  | DrilldownDatum[];
+  | TrendAnalysisDatum[];
+
+type TrendAnalysisDatum = {
+  week: number;
+  weekLabel: string;
+  barValue: number;
+  lineValue: number;
+  marginalContributionRate: number;
+  barColor?: string;
+};
+
+type TrendMetricInfo = {
+  key: string;
+  label: string;
+  unit?: string;
+  precision?: number;
+};
+
+type TrendContext = {
+  dimensionLabel?: string;
+  dimensionValue?: string;
+  dimensionValueLabel?: string;
+  barMetric?: TrendMetricInfo;
+  lineMetric?: TrendMetricInfo;
+};
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { chartType, data, dimension, metrics, fullData } = body;
+    const {
+      chartType,
+      data,
+      dimension,
+      metrics,
+      dimensionLabel,
+      dimensionValue,
+      dimensionValueLabel,
+      barMetric,
+      lineMetric,
+    } = body;
 
     // 构建提示词，遵循麦肯锡金字塔原理和车险经营分析最佳实践
-    const prompt = buildAnalysisPrompt(chartType, data, dimension, metrics, fullData);
+    const prompt = buildAnalysisPrompt(
+      chartType,
+      data,
+      dimension,
+      metrics,
+      {
+        dimensionLabel,
+        dimensionValue,
+        dimensionValueLabel,
+        barMetric,
+        lineMetric,
+      },
+    );
 
     // 调用Gemini API
     const response = await ai.generate(prompt);
 
-    return NextResponse.json({ analysis: response.text });
+    return NextResponse.json({
+      analysis: response.text,
+      prompt,
+      metadata: {
+        chartType,
+        dimension,
+        dimensionLabel,
+        dimensionValue,
+        dimensionValueLabel,
+        metrics,
+      }
+    });
   } catch (error) {
     console.error('AI分析失败:', error);
     return NextResponse.json(
@@ -60,7 +111,7 @@ function buildAnalysisPrompt(
   data: AnalysisData,
   dimension?: string,
   metrics?: { inner?: string; outer?: string; metric?: string },
-  fullData?: DrilldownDatum[]
+  trendContext?: TrendContext,
 ): string {
   const markupGuide = `
 **标记语法规范：**
@@ -69,9 +120,6 @@ function buildAnalysisPrompt(
 - {change|类型|数值} - 变化标签（rise上升恶化用红色，drop下降优化用绿色）
 - {dim|维度|取值} - 维度标签（如 {dim|业务类型|非营客车}）
 - {org|类型|名称} - 机构标签（如 {org|三级机构|营业部A}）
-- [DRILLDOWN]...[/DRILLDOWN] - 一级下钻区块
-- [LEVEL2]...[/LEVEL2] - 二级下钻区块
-- [LEVEL3]...[/LEVEL3] - 三级下钻区块
 
 **颜色规则：**
 满期边际贡献率：>12%绿色，8-12%蓝色，4-8%黄色，<4%红色
@@ -84,14 +132,10 @@ function buildAnalysisPrompt(
 1. 遵循金字塔原理：先结论，后论据，层次分明
 2. 第一段必须是核心观点（1-2句话），使用标记突出关键指标
 3. 第二段展开关键发现（2-3个要点，使用 1. 2. 3. 编号格式）
-4. **必须进行三层下钻分析**（如有数据）：
-   - 一级：客户类别维度（[DRILLDOWN]块）
-   - 二级：业务类型维度（[LEVEL2]块）
-   - 三级：三级机构 → 险别组合（[LEVEL3]块）
-5. 第三段提供行动建议（1-2个具体建议）
-6. 使用车险行业术语，关注经营效益
-7. 总字数控制在300字以内（含标记语法）
-8. **必须使用标记语法**标注所有关键数据、维度、变化趋势
+4. 第三段提供行动建议（1-2个具体建议）
+5. 使用车险行业术语，关注经营效益
+6. 总字数控制在200字以内（含标记语法）
+7. **必须使用标记语法**标注所有关键数据、维度、变化趋势
 
 ${markupGuide}
 
@@ -120,24 +164,7 @@ ${summary}
 关键发现：
 1. {dim|客户类别|私家车}规模领先，但{dim|业务类型|非营客车}的{metric|边际贡献率|18.2%}更具盈利性
 2. {dim|客户类别|货运车辆}的{metric|边际贡献率|3.8%}处于{color|red|红色预警区间}
-
-[DRILLDOWN]
-{dim|客户类别|私家车}细分：
-- {dim|业务类型|非营客车}: {metric|签单保费|800万}，{metric|边际贡献率|16.5%}
-- {dim|业务类型|单位客车}: {metric|签单保费|450万}，{metric|边际贡献率|14.2%}
-[/DRILLDOWN]
-
-[LEVEL2]
-{dim|业务类型|非营客车}机构分布：
-- {org|三级机构|营业部A}: {metric|签单保费|320万}，{metric|边际贡献率|18.5%}
-- {org|三级机构|营业部B}: {metric|签单保费|280万}，{metric|边际贡献率|15.2%}
-[/LEVEL2]
-
-[LEVEL3]
-{org|三级机构|营业部A}险别结构：
-- {dim|险别组合|车损险+三者险}: {metric|签单保费|180万}，{metric|边际贡献率|20.1%}
-- {dim|险别组合|单三者险}: {metric|签单保费|140万}，{metric|边际贡献率|16.8%}
-[/LEVEL3]
+3. 建议重点发展高边际贡献率业务，优化低盈利产品结构
 
 请严格按照上述格式和标记语法输出分析报告。`;
   }
@@ -163,24 +190,7 @@ ${summary}
 关键发现：
 1. 前三名贡献了总量的65%，但{metric|边际贡献率|差异达10pp}
 2. 排名靠后的{dim|${dimensionLabel}|某项}虽规模小但{metric|边际贡献率|18.2%}{color|green|盈利性强}
-
-[DRILLDOWN]
-{dim|${dimensionLabel}|排名第一}客户类别细分：
-- {dim|客户类别|私家车}: {metric|${metricLabel}|800万}，{metric|边际贡献率|16.5%}
-- {dim|客户类别|单位客车}: {metric|${metricLabel}|450万}，{metric|边际贡献率|14.2%}
-[/DRILLDOWN]
-
-[LEVEL2]
-{dim|客户类别|私家车}业务类型分布：
-- {dim|业务类型|非营客车}: {metric|${metricLabel}|520万}，{metric|边际贡献率|17.8%}
-- {dim|业务类型|其他}: {metric|${metricLabel}|280万}，{metric|边际贡献率|15.2%}
-[/LEVEL2]
-
-[LEVEL3]
-{dim|业务类型|非营客车}机构与险别：
-- {org|三级机构|营业部A} {dim|险别|车损+三者}: {metric|${metricLabel}|180万}，{metric|边际贡献率|19.5%}
-- {org|三级机构|营业部B} {dim|险别|单三者}: {metric|${metricLabel}|140万}，{metric|边际贡献率|16.8%}
-[/LEVEL3]
+3. 建议聚焦头部优质资源，同时关注高盈利性细分市场
 
 请严格按照上述格式和标记语法输出分析报告。`;
   }
@@ -205,24 +215,81 @@ ${summary}
 关键发现：
 1. 有3个${dimensionLabel}超基准线，其中{dim|${dimensionLabel}|某项}{metric|费用率|18.2%}{change|rise|+4.2pp}
 2. {dim|${dimensionLabel}|表现优秀项}费用率仅{metric|费用率|10.5%}，可作为标杆
+3. 建议对超标项实施费用管控措施，学习标杆经验降低费用率
 
-[DRILLDOWN]
-{dim|${dimensionLabel}|费用超标项}客户类别分析：
-- {dim|客户类别|货运车辆}: {metric|费用率|22.5%}，主要是{dim|费用类型|手续费}过高
-- {dim|客户类别|私家车}: {metric|费用率|15.8%}，{dim|费用类型|宣传费}偏高
-[/DRILLDOWN]
+请严格按照上述格式和标记语法输出分析报告。`;
+  }
 
-[LEVEL2]
-{dim|客户类别|货运车辆}业务类型细分：
-- {dim|业务类型|营业货运}: {metric|费用率|25.2%}，{change|rise|严重超标}
-- {dim|业务类型|非营货车}: {metric|费用率|19.8%}，{change|rise|中度超标}
-[/LEVEL2]
+  if (chartType === 'trend') {
+    const trendData = (data as TrendAnalysisDatum[]).slice(-12);
+    if (!trendData.length) {
+      return baseContext + '暂无可用的趋势数据';
+    }
 
-[LEVEL3]
-{dim|业务类型|营业货运}机构与险别：
-- {org|三级机构|营业部C} {dim|险别|车损+三者}: {metric|费用率|28.5%}，{color|red|需重点整改}
-- {org|三级机构|营业部D} {dim|险别|单三者}: {metric|费用率|22.8%}，手续费率过高
-[/LEVEL3]
+    const dimensionLabel = trendContext?.dimensionLabel || dimension || '分析维度';
+    const dimensionValueLabel =
+      trendContext?.dimensionValueLabel || trendContext?.dimensionValue || '全部';
+    const barMetricLabel = trendContext?.barMetric?.label || '柱状指标';
+    const lineMetricLabel = trendContext?.lineMetric?.label || '折线指标';
+
+    const barUnit = trendContext?.barMetric?.unit ?? '';
+    const lineUnit = trendContext?.lineMetric?.unit ?? '';
+    const barPrecision = trendContext?.barMetric?.precision ?? 0;
+    const linePrecision = trendContext?.lineMetric?.precision ?? (lineUnit === '%' ? 2 : 3);
+
+    const formatMetricValue = (value: number, precision: number, unit?: string) => {
+      let formatted: string;
+      if (precision === 0) {
+        formatted = Math.round(value).toLocaleString('zh-CN');
+      } else {
+        formatted = value.toFixed(precision);
+      }
+      return unit ? `${formatted}${unit}` : formatted;
+    };
+
+    const formatMarginalRate = (value: number) => `${(value * 100).toFixed(2)}%`;
+
+    const summary = trendData
+      .map((item) => {
+        const barText = formatMetricValue(item.barValue, barPrecision, barUnit);
+        const lineText = formatMetricValue(item.lineValue, linePrecision, lineUnit);
+        const marginalText = formatMarginalRate(item.marginalContributionRate);
+        return `${item.weekLabel}: ${barMetricLabel}=${barText}, ${lineMetricLabel}=${lineText}, 满期边际贡献率=${marginalText}`;
+      })
+      .join('\n');
+
+    const latest = trendData[trendData.length - 1];
+    const latestBar = formatMetricValue(latest.barValue, barPrecision, barUnit);
+    const latestLine = formatMetricValue(latest.lineValue, linePrecision, lineUnit);
+    const latestMarginal = formatMarginalRate(latest.marginalContributionRate);
+
+    const peakBar = trendData.reduce((max, item) => (item.barValue > max.barValue ? item : max), trendData[0]);
+    const troughBar = trendData.reduce((min, item) => (item.barValue < min.barValue ? item : min), trendData[0]);
+    const peakLine = trendData.reduce((max, item) => (item.lineValue > max.lineValue ? item : max), trendData[0]);
+
+    const peakBarText = `${peakBar.weekLabel}${barMetricLabel}=${formatMetricValue(peakBar.barValue, barPrecision, barUnit)}`;
+    const troughBarText = `${troughBar.weekLabel}${barMetricLabel}=${formatMetricValue(troughBar.barValue, barPrecision, barUnit)}`;
+    const peakLineText = `${peakLine.weekLabel}${lineMetricLabel}=${formatMetricValue(peakLine.lineValue, linePrecision, lineUnit)}`;
+
+    return baseContext + `
+**图表类型：** 最近12周趋势对比图
+**分析维度：** ${dimensionLabel}
+**筛选取值：** ${dimensionValueLabel}
+**柱状指标：** ${barMetricLabel}
+**折线指标：** ${lineMetricLabel}
+**最新周概览：** 第${latest.week}周，${barMetricLabel}=${latestBar}，${lineMetricLabel}=${latestLine}，满期边际贡献率=${latestMarginal}
+**峰值与低谷：** ${peakBarText}；${troughBarText}；${peakLineText}
+**周度数据：**
+${summary}
+
+**输出示例：**
+{dim|${dimensionLabel}|${dimensionValueLabel}}近12周{metric|${barMetricLabel.replace(/（.*?）/g, '')}|${latestBar}}冲高，{metric|${lineMetricLabel.replace(/（.*?）/g, '')}|${latestLine}}与{metric|满期边际贡献率|${latestMarginal}}{color|blue|联动上行}。
+
+关键发现：
+1. 最近三周{metric|${barMetricLabel.replace(/（.*?）/g, '')}|连续抬升}，带动{metric|满期边际贡献率|${latestMarginal}}
+2. ${peakBar.weekLabel}{dim|${dimensionLabel}|${dimensionValueLabel}}达到阶段峰值，但${peakLineText}未同步走强
+3. ${troughBar.weekLabel}{metric|${barMetricLabel.replace(/（.*?）/g, '')}|下探}，需重点监测费用与赔付释放
+4. 建议稳定保费规模，优化费用率和赔付率以提升边际贡献率
 
 请严格按照上述格式和标记语法输出分析报告。`;
   }

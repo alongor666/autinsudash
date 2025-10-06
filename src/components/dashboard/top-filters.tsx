@@ -105,6 +105,7 @@ export function TopFilters({ onApply }: TopFiltersProps) {
       region: null,
       customerCategories: null,
       insuranceTypes: null,
+      businessTypes: null,
       energyTypes: null,
       transferredStatus: null,
       coverageTypes: null,

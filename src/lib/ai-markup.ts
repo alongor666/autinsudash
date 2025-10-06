@@ -7,9 +7,6 @@
  * - {change|type|value} - 变化标签（rise 红色恶化，drop 绿色优化）
  * - {dim|label|value} - 维度标签（中性蓝色）
  * - {org|type|name} - 机构标签（特殊样式）
- * - [DRILLDOWN|title]...[/DRILLDOWN] - 下钻分析区块
- * - [LEVEL2]...[/LEVEL2] - 二级下钻
- * - [LEVEL3]...[/LEVEL3] - 三级下钻
  */
 
 import { getMarginalContributionColor } from './color-scale';
@@ -161,30 +158,6 @@ function parseInlineTags(text: string): string {
   return result;
 }
 
-/**
- * 解析下钻区块
- */
-function parseDrilldownBlock(content: string, level: number = 1): string {
-  const levelClass = level === 1
-    ? 'border-l-4 border-blue-300 bg-blue-50/40 pl-4 pr-3 py-3'
-    : level === 2
-    ? 'border-l-4 border-indigo-300 bg-indigo-50/40 pl-4 pr-3 py-2.5'
-    : 'border-l-4 border-purple-300 bg-purple-50/40 pl-4 pr-3 py-2';
-
-  const icon = level === 1 ? '📊' : level === 2 ? '🔍' : '🎯';
-  const titleClass = level === 1
-    ? 'text-sm font-semibold text-blue-900 mb-2'
-    : level === 2
-    ? 'text-sm font-semibold text-indigo-900 mb-1.5'
-    : 'text-xs font-semibold text-purple-900 mb-1.5';
-
-  return `<div class="my-3 ${levelClass}">
-    <div class="${titleClass}">${icon} 下钻分析${level > 1 ? ` (L${level})` : ''}</div>
-    <div class="space-y-1.5 text-sm">
-      ${content}
-    </div>
-  </div>`;
-}
 
 /**
  * 主解析函数：将 AI 标记文本转换为 HTML
@@ -199,40 +172,7 @@ export function parseAIMarkup(text: string): string {
     const trimmed = para.trim();
     if (!trimmed) return '';
 
-    // 2. 检查是否是下钻区块
-    const drilldownMatch = trimmed.match(/^\[DRILLDOWN(?:\|([^\]]+))?\]([\s\S]*?)\[\/DRILLDOWN\]$/);
-    if (drilldownMatch) {
-      const blockContent = drilldownMatch[2].trim();
-      const lines = blockContent.split('\n').map(line => {
-        const parsed = parseInlineTags(line.trim());
-        return parsed ? `<div>${parsed}</div>` : '';
-      }).filter(Boolean).join('');
-      return parseDrilldownBlock(lines, 1);
-    }
-
-    // 3. 检查二级下钻
-    const level2Match = trimmed.match(/^\[LEVEL2(?:\|([^\]]+))?\]([\s\S]*?)\[\/LEVEL2\]$/);
-    if (level2Match) {
-      const blockContent = level2Match[2].trim();
-      const lines = blockContent.split('\n').map(line => {
-        const parsed = parseInlineTags(line.trim());
-        return parsed ? `<div>${parsed}</div>` : '';
-      }).filter(Boolean).join('');
-      return parseDrilldownBlock(lines, 2);
-    }
-
-    // 4. 检查三级下钻
-    const level3Match = trimmed.match(/^\[LEVEL3(?:\|([^\]]+))?\]([\s\S]*?)\[\/LEVEL3\]$/);
-    if (level3Match) {
-      const blockContent = level3Match[2].trim();
-      const lines = blockContent.split('\n').map(line => {
-        const parsed = parseInlineTags(line.trim());
-        return parsed ? `<div>${parsed}</div>` : '';
-      }).filter(Boolean).join('');
-      return parseDrilldownBlock(lines, 3);
-    }
-
-    // 5. 处理普通段落和列表
+    // 处理普通段落和列表
     const lines = trimmed.split('\n').map(line => line.trim());
 
     // 检查是否为列表项

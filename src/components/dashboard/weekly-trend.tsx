@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getWeekEndDate } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -45,9 +46,10 @@ import {
   dimensionGroups,
 } from "@/components/dashboard/customer-performance";
 import { getMarginalContributionColor } from "@/lib/color-scale";
-import { parseAIMarkup } from "@/lib/ai-markup";
+import { AIAnalysisDisplay } from './ai-analysis-display';
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Sparkles } from "lucide-react";
+import { isStaticExport } from '@/lib/env';
 import {
   CONTROL_BUTTON_CLASS,
   CONTROL_FIELD_CLASS,
@@ -233,6 +235,7 @@ const rateMetricDefinitions: Record<RateMetricKey, RateMetricDefinition> = {
 
 type ChartDatum = {
   week: number;
+  year: number;
   weekLabel: string;
   barValue: number;
   lineValue: number;
@@ -343,7 +346,7 @@ export function WeeklyTrendChart() {
   const [barMetricKey, setBarMetricKey] = useState<AbsoluteMetricKey>("signedPremium");
   const [lineMetricKey, setLineMetricKey] = useState<RateMetricKey>("marginalContributionRate");
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
-  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [analysisCache, setAnalysisCache] = useState<Map<string, { analysis: string; prompt?: string; metadata?: Record<string, unknown> }>>(new Map());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const datasetForOptions = useMemo(
@@ -438,8 +441,13 @@ export function WeeklyTrendChart() {
         ? 0
         : accumulator.marginalContributionAmount / accumulator.maturedPremium;
       const barColor = getMarginalContributionColor(marginalContributionRate);
+
+      // 从对应周的数据行中获取年份
+      const yearForWeek = dimensionFilteredRows.find((row) => row.week_number === week)?.policy_start_year || new Date().getFullYear();
+
       return {
         week,
+        year: yearForWeek,
         weekLabel: `第${week}周`,
         barValue: barMetric.compute(accumulator),
         lineValue: lineMetric.compute(accumulator),
@@ -509,6 +517,16 @@ export function WeeklyTrendChart() {
     return (value: number) => value.toFixed(lineMetric.unit === "%" ? 1 : 3);
   }, [lineMetric]);
 
+  // 生成缓存键（在 chartData 之后）
+  const analysisCacheKey = useMemo(() => {
+    return `trend_${dimension}_${dimensionValue}_${barMetricKey}_${lineMetricKey}_${chartData.length}`;
+  }, [dimension, dimensionValue, barMetricKey, lineMetricKey, chartData.length]);
+
+  // 从缓存中获取分析结果
+  const analysis = useMemo(() => {
+    return analysisCache.get(analysisCacheKey) || null;
+  }, [analysisCache, analysisCacheKey]);
+
   const insight = useMemo(() => {
     if (!chartData.length) {
       return "暂无可用数据";
@@ -534,9 +552,13 @@ export function WeeklyTrendChart() {
         if (!datum) {
           return null;
         }
+        const endDate = getWeekEndDate(datum.year, datum.week);
         return (
           <div className="rounded-md border border-border/50 bg-background/90 p-3 text-xs shadow-xl backdrop-blur">
-            <div className="font-medium text-foreground">{datum.weekLabel}</div>
+            <div className="font-medium text-foreground">
+              {datum.weekLabel}
+              <span className="ml-2 text-muted-foreground">（截至{endDate}）</span>
+            </div>
             <div className="mt-2 space-y-1 text-muted-foreground">
               <div>
                 {barMetric.label}：
@@ -570,16 +592,6 @@ export function WeeklyTrendChart() {
   const isTableMode = viewMode === 'table';
   const canCopyTable = tableRows.length > 0;
 
-  useEffect(() => {
-    setAnalysis(null);
-  }, [dimension, dimensionValue, barMetricKey, lineMetricKey]);
-
-  useEffect(() => {
-    if (!chartData.length) {
-      setAnalysis(null);
-    }
-  }, [chartData.length]);
-
   const toggleViewMode = () => {
     setViewMode((prev) => (prev === 'chart' ? 'table' : 'chart'));
   };
@@ -612,21 +624,50 @@ export function WeeklyTrendChart() {
   };
 
   const handleAnalyze = async () => {
+    if (isStaticExport) {
+      toast({
+        title: '静态预览模式',
+        description: '当前为静态导出预览，AI 分析已禁用。',
+      });
+      return;
+    }
     if (!chartData.length) {
       return;
+    }
+
+    // 检查缓存
+    if (analysisCache.has(analysisCacheKey)) {
+      return; // 已有缓存，无需重新分析
     }
 
     setIsAnalyzing(true);
 
     try {
+      const dimensionLabel =
+        dimensionConfigs.find((option) => option.value === dimension)?.label ?? '维度';
+      const dimensionValueLabel =
+        dimensionValueOptions.find((option) => option.value === dimensionValue)?.label ?? '全部';
+      const barPrecision = 0;
+      const linePrecision = lineMetric.unit === '%' ? 2 : 3;
+
       const requestData = {
         chartType: 'trend',
         dimension,
-        dimensionLabel:
-          dimensionConfigs.find((option) => option.value === dimension)?.label ?? '维度',
+        dimensionLabel,
         dimensionValue,
-        barMetric: { key: barMetric.key, label: barMetric.label },
-        lineMetric: { key: lineMetric.key, label: lineMetric.label },
+        dimensionValueLabel,
+        barMetric: {
+          key: barMetric.key,
+          label: barMetric.label,
+          unit: barMetric.unit,
+          precision: barPrecision,
+        },
+        lineMetric: {
+          key: lineMetric.key,
+          label: lineMetric.label,
+          unit: lineMetric.unit,
+          precision: linePrecision,
+        },
         data: chartData,
       };
 
@@ -640,8 +681,14 @@ export function WeeklyTrendChart() {
         throw new Error('分析失败');
       }
 
-      const { analysis: result } = await response.json();
-      setAnalysis(result);
+      const { analysis, prompt, metadata } = await response.json();
+
+      // 保存到缓存
+      setAnalysisCache((prev) => {
+        const newCache = new Map(prev);
+        newCache.set(analysisCacheKey, { analysis, prompt, metadata });
+        return newCache;
+      });
     } catch (error) {
       console.error('AI分析失败:', error);
       toast({
@@ -750,10 +797,18 @@ export function WeeklyTrendChart() {
               disabled={isAnalyzing || !chartData.length}
             >
               <Sparkles className="h-4 w-4" />
-              {isAnalyzing ? '分析中...' : analysis ? '重新分析' : 'AI分析'}
+              {isStaticExport ? '静态模式已禁用' : isAnalyzing ? '分析中...' : analysis ? '重新分析' : 'AI分析'}
             </Button>
           </div>
         </div>
+
+        {analysis && (
+          <AIAnalysisDisplay
+            analysis={analysis.analysis}
+            prompt={analysis.prompt}
+            metadata={analysis.metadata}
+          />
+        )}
 
         {isTableMode ? (
           tableRows.length === 0 ? (
@@ -858,12 +913,6 @@ export function WeeklyTrendChart() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
-        )}
-
-        {analysis && (
-          <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-3">
-            <div dangerouslySetInnerHTML={{ __html: parseAIMarkup(analysis) }} />
           </div>
         )}
       </CardContent>

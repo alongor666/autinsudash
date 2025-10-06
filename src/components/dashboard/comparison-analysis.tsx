@@ -31,8 +31,9 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getMarginalContributionColor } from "@/lib/color-scale";
+import { isStaticExport } from '@/lib/env';
 import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
-import { parseAIMarkup } from "@/lib/ai-markup";
+import { AIAnalysisDisplay } from './ai-analysis-display';
 import type { RawDataRow } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -421,7 +422,7 @@ export function ComparisonAnalysisChart() {
   const [dimension, setDimension] = useState<DimensionKey>("customer_category_3");
   const [metricKey, setMetricKey] = useState<MetricKey>("signedPremium");
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [barAnalysis, setBarAnalysis] = useState<string>('');
+  const [analysisCache, setAnalysisCache] = useState<Map<string, { analysis: string; prompt?: string; metadata?: Record<string, unknown> }>>(new Map());
   const [analyzingChart, setAnalyzingChart] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
 
@@ -498,6 +499,16 @@ export function ComparisonAnalysisChart() {
     );
   }, [filteredData, dimension, metricKey, sortOrder]);
 
+  // 生成缓存键（在 barData 之后）
+  const analysisCacheKey = useMemo(() => {
+    return `comparison_${dimension}_${metricKey}_${sortOrder}_${barData.length}`;
+  }, [dimension, metricKey, sortOrder, barData.length]);
+
+  // 从缓存中获取分析结果
+  const barAnalysis = useMemo(() => {
+    return analysisCache.get(analysisCacheKey) || '';
+  }, [analysisCache, analysisCacheKey]);
+
   const yAxisWidth = useMemo(() => {
     if (!barData.length) {
       return 120;
@@ -559,13 +570,8 @@ export function ComparisonAnalysisChart() {
   const canCopyTable = tableRows.length > 0;
 
   useEffect(() => {
-    setBarAnalysis('');
-  }, [dimension, metricKey, sortOrder]);
-
-  useEffect(() => {
     if (!barData.length) {
       setViewMode('chart');
-      setBarAnalysis('');
     }
   }, [barData.length]);
 
@@ -624,6 +630,18 @@ export function ComparisonAnalysisChart() {
 
   // AI分析函数
   const analyzeChart = async () => {
+    if (isStaticExport) {
+      toast({
+        title: '静态预览模式',
+        description: '当前为静态导出预览，AI 分析已禁用。',
+      });
+      return;
+    }
+    // 检查缓存
+    if (analysisCache.has(analysisCacheKey)) {
+      return; // 已有缓存，无需重新分析
+    }
+
     setAnalyzingChart(true);
 
     try {
@@ -646,10 +664,21 @@ export function ComparisonAnalysisChart() {
         throw new Error('分析失败');
       }
 
-      const { analysis } = await response.json();
-      setBarAnalysis(analysis);
+      const { analysis, prompt, metadata } = await response.json();
+
+      // 保存到缓存
+      setAnalysisCache((prev) => {
+        const newCache = new Map(prev);
+        newCache.set(analysisCacheKey, { analysis, prompt, metadata });
+        return newCache;
+      });
     } catch (error) {
       console.error('AI分析失败:', error);
+      toast({
+        variant: 'destructive',
+        title: 'AI 分析失败',
+        description: '请稍后重试或检查网络连接。',
+      });
     } finally {
       setAnalyzingChart(false);
     }
@@ -736,10 +765,19 @@ export function ComparisonAnalysisChart() {
               disabled={analyzingChart || !barData.length}
             >
               <Sparkles className="h-4 w-4" />
-              {analyzingChart ? '分析中...' : barAnalysis ? '重新分析' : 'AI分析'}
+              {isStaticExport ? '静态模式已禁用' : analyzingChart ? '分析中...' : barAnalysis ? '重新分析' : 'AI分析'}
             </Button>
           </div>
         </div>
+
+        {barAnalysis && (
+          <AIAnalysisDisplay
+            analysis={barAnalysis.analysis}
+            prompt={barAnalysis.prompt}
+            metadata={barAnalysis.metadata}
+          />
+        )}
+
         {isTableMode ? (
           tableRows.length === 0 ? (
             <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
@@ -843,14 +881,8 @@ export function ComparisonAnalysisChart() {
             </ResponsiveContainer>
           </div>
         )}
-        <div className="space-y-3">
-          <p className="text-sm text-muted-foreground/70">{barExplanation}</p>
-          {barAnalysis && (
-            <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-3">
-              <div dangerouslySetInnerHTML={{ __html: parseAIMarkup(barAnalysis) }} />
-            </div>
-          )}
-        </div>
+
+        <p className="text-sm text-muted-foreground/70">{barExplanation}</p>
       </CardContent>
     </Card>
   );

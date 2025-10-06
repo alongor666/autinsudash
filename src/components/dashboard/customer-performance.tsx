@@ -27,8 +27,9 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getExpenseContributionColor, getMarginalContributionColor } from "@/lib/color-scale";
+import { isStaticExport } from '@/lib/env';
 import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
-import { parseAIMarkup } from "@/lib/ai-markup";
+import { AIAnalysisDisplay } from './ai-analysis-display';
 import type { RawDataRow } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -622,9 +623,8 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
   // 排序状态：'desc' 降序（默认），'asc' 升序
   const [expenseSortOrder, setExpenseSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // AI分析状态
-  const [sunburstAnalysis, setSunburstAnalysis] = useState<string>('');
-  const [expenseAnalysis, setExpenseAnalysis] = useState<string>('');
+  // AI分析缓存状态
+  const [analysisCache, setAnalysisCache] = useState<Map<string, { analysis: string; prompt?: string; metadata?: Record<string, unknown> }>>(new Map());
   const [analyzingChart, setAnalyzingChart] = useState<string | null>(null);
 
   const datasetForOptions = useMemo(() => (filteredData.length ? filteredData : rawData), [filteredData, rawData]);
@@ -827,6 +827,24 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
     );
   }, [filteredData, expenseDimension, expenseSortOrder, showExpense]);
 
+  // 生成缓存键（在 sunburstData 和 expenseData 之后）
+  const sunburstCacheKey = useMemo(() => {
+    return `sunburst_${sunburstDimension}_${innerMetricKey}_${outerMetricKey}_${sunburstData.length}`;
+  }, [sunburstDimension, innerMetricKey, outerMetricKey, sunburstData.length]);
+
+  const expenseCacheKey = useMemo(() => {
+    return `expense_${expenseDimension}_${expenseSortOrder}_${expenseData.length}`;
+  }, [expenseDimension, expenseSortOrder, expenseData.length]);
+
+  // 从缓存中获取分析结果
+  const sunburstAnalysis = useMemo(() => {
+    return analysisCache.get(sunburstCacheKey) || '';
+  }, [analysisCache, sunburstCacheKey]);
+
+  const expenseAnalysis = useMemo(() => {
+    return analysisCache.get(expenseCacheKey) || '';
+  }, [analysisCache, expenseCacheKey]);
+
   const expenseChartHeight = useMemo(() => {
     if (!expenseData.length) {
       return 320;
@@ -919,14 +937,6 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
   const isExpenseTable = expenseViewMode === 'table';
   const canCopySunburst = sunburstTableRows.length > 0;
   const canCopyExpense = expenseTableRows.length > 0;
-
-  useEffect(() => {
-    setSunburstAnalysis('');
-  }, [sunburstDimension, innerMetricKey, outerMetricKey]);
-
-  useEffect(() => {
-    setExpenseAnalysis('');
-  }, [expenseDimension, expenseSortOrder]);
 
   useEffect(() => {
     if (!sunburstData.length) {
@@ -1133,6 +1143,20 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
 
   // AI分析函数
   const analyzeChart = async (chartType: 'sunburst' | 'expense') => {
+    if (isStaticExport) {
+      toast({
+        title: '静态预览模式',
+        description: '当前为静态导出预览，AI 分析已禁用。',
+      });
+      return;
+    }
+    const cacheKey = chartType === 'sunburst' ? sunburstCacheKey : expenseCacheKey;
+
+    // 检查缓存
+    if (analysisCache.has(cacheKey)) {
+      return; // 已有缓存，无需重新分析
+    }
+
     setAnalyzingChart(chartType);
 
     try {
@@ -1166,16 +1190,21 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
         throw new Error('分析失败');
       }
 
-      const { analysis } = await response.json();
+      const { analysis, prompt, metadata } = await response.json();
 
-      if (chartType === 'sunburst') {
-        setSunburstAnalysis(analysis);
-      } else if (chartType === 'expense') {
-        setExpenseAnalysis(analysis);
-      }
+      // 保存到缓存
+      setAnalysisCache((prev) => {
+        const newCache = new Map(prev);
+        newCache.set(cacheKey, { analysis, prompt, metadata });
+        return newCache;
+      });
     } catch (error) {
       console.error('AI分析失败:', error);
-      // 可以添加 toast 提示
+      toast({
+        variant: 'destructive',
+        title: 'AI 分析失败',
+        description: '请稍后重试或检查网络连接。',
+      });
     } finally {
       setAnalyzingChart(null);
     }
@@ -1267,18 +1296,18 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
                     disabled={analyzingChart !== null || sunburstData.length === 0}
                   >
                     <Sparkles className="h-4 w-4" />
-                    {analyzingChart === 'sunburst' ? '分析中...' : sunburstAnalysis ? '重新分析' : 'AI分析'}
+                    {isStaticExport ? '静态模式已禁用' : analyzingChart === 'sunburst' ? '分析中...' : sunburstAnalysis ? '重新分析' : 'AI分析'}
                   </Button>
                 </div>
               </div>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground/70">{sunburstExplanation}</p>
-            {sunburstAnalysis && (
-              <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-3">
-                <div dangerouslySetInnerHTML={{ __html: parseAIMarkup(sunburstAnalysis) }} />
-              </div>
-            )}
-          </div>
+
+          {sunburstAnalysis && (
+            <AIAnalysisDisplay
+              analysis={sunburstAnalysis.analysis}
+              prompt={sunburstAnalysis.prompt}
+              metadata={sunburstAnalysis.metadata}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -1501,6 +1530,8 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
           </ResponsiveContainer>
         </div>
       )}
+
+      <p className="text-sm text-muted-foreground/70">{sunburstExplanation}</p>
     </>
   )}
 
@@ -1570,10 +1601,19 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
               disabled={analyzingChart !== null || expenseData.length === 0}
             >
               <Sparkles className="h-4 w-4" />
-              {analyzingChart === 'expense' ? '分析中...' : expenseAnalysis ? '重新分析' : 'AI分析'}
-            </Button>
-          </div>
+                    {isStaticExport ? '静态模式已禁用' : analyzingChart === 'expense' ? '分析中...' : expenseAnalysis ? '重新分析' : 'AI分析'}
+                  </Button>
+                </div>
         </div>
+
+        {expenseAnalysis && (
+          <AIAnalysisDisplay
+            analysis={expenseAnalysis.analysis}
+            prompt={expenseAnalysis.prompt}
+            metadata={expenseAnalysis.metadata}
+          />
+        )}
+
         {isExpenseTable ? (
           expenseTableRows.length === 0 ? (
             <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
@@ -1688,14 +1728,8 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
             </ResponsiveContainer>
           </div>
         )}
-        <div className="space-y-3">
-          <p className="text-sm text-muted-foreground/70">{expenseExplanation}</p>
-          {expenseAnalysis && (
-            <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-3">
-              <div dangerouslySetInnerHTML={{ __html: parseAIMarkup(expenseAnalysis) }} />
-            </div>
-          )}
-        </div>
+
+        <p className="text-sm text-muted-foreground/70">{expenseExplanation}</p>
       </CardContent>
     </Card>
       )}
