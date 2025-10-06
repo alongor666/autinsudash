@@ -49,7 +49,6 @@ import { getMarginalContributionColor } from "@/lib/color-scale";
 import { AIAnalysisDisplay } from './ai-analysis-display';
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Sparkles } from "lucide-react";
-import { isStaticExport } from '@/lib/env';
 import {
   CONTROL_BUTTON_CLASS,
   CONTROL_FIELD_CLASS,
@@ -624,13 +623,6 @@ export function WeeklyTrendChart() {
   };
 
   const handleAnalyze = async () => {
-    if (isStaticExport) {
-      toast({
-        title: '静态预览模式',
-        description: '当前为静态导出预览，AI 分析已禁用。',
-      });
-      return;
-    }
     if (!chartData.length) {
       return;
     }
@@ -797,7 +789,7 @@ export function WeeklyTrendChart() {
               disabled={isAnalyzing || !chartData.length}
             >
               <Sparkles className="h-4 w-4" />
-              {isStaticExport ? '静态模式已禁用' : isAnalyzing ? '分析中...' : analysis ? '重新分析' : 'AI分析'}
+              {isAnalyzing ? '分析中...' : analysis ? '重新分析' : 'AI分析'}
             </Button>
           </div>
         </div>

@@ -31,7 +31,6 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getMarginalContributionColor } from "@/lib/color-scale";
-import { isStaticExport } from '@/lib/env';
 import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
 import { AIAnalysisDisplay } from './ai-analysis-display';
 import type { RawDataRow } from "@/lib/types";
@@ -630,13 +629,6 @@ export function ComparisonAnalysisChart() {
 
   // AI分析函数
   const analyzeChart = async () => {
-    if (isStaticExport) {
-      toast({
-        title: '静态预览模式',
-        description: '当前为静态导出预览，AI 分析已禁用。',
-      });
-      return;
-    }
     // 检查缓存
     if (analysisCache.has(analysisCacheKey)) {
       return; // 已有缓存，无需重新分析
@@ -765,7 +757,7 @@ export function ComparisonAnalysisChart() {
               disabled={analyzingChart || !barData.length}
             >
               <Sparkles className="h-4 w-4" />
-              {isStaticExport ? '静态模式已禁用' : analyzingChart ? '分析中...' : barAnalysis ? '重新分析' : 'AI分析'}
+              {analyzingChart ? '分析中...' : barAnalysis ? '重新分析' : 'AI分析'}
             </Button>
           </div>
         </div>

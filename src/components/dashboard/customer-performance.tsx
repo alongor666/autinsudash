@@ -27,7 +27,6 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getExpenseContributionColor, getMarginalContributionColor } from "@/lib/color-scale";
-import { isStaticExport } from '@/lib/env';
 import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
 import { AIAnalysisDisplay } from './ai-analysis-display';
 import type { RawDataRow } from "@/lib/types";
@@ -1143,13 +1142,6 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
 
   // AI分析函数
   const analyzeChart = async (chartType: 'sunburst' | 'expense') => {
-    if (isStaticExport) {
-      toast({
-        title: '静态预览模式',
-        description: '当前为静态导出预览，AI 分析已禁用。',
-      });
-      return;
-    }
     const cacheKey = chartType === 'sunburst' ? sunburstCacheKey : expenseCacheKey;
 
     // 检查缓存
@@ -1296,7 +1288,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
                     disabled={analyzingChart !== null || sunburstData.length === 0}
                   >
                     <Sparkles className="h-4 w-4" />
-                    {isStaticExport ? '静态模式已禁用' : analyzingChart === 'sunburst' ? '分析中...' : sunburstAnalysis ? '重新分析' : 'AI分析'}
+                    {analyzingChart === 'sunburst' ? '分析中...' : sunburstAnalysis ? '重新分析' : 'AI分析'}
                   </Button>
                 </div>
               </div>
@@ -1601,9 +1593,9 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
               disabled={analyzingChart !== null || expenseData.length === 0}
             >
               <Sparkles className="h-4 w-4" />
-                    {isStaticExport ? '静态模式已禁用' : analyzingChart === 'expense' ? '分析中...' : expenseAnalysis ? '重新分析' : 'AI分析'}
-                  </Button>
-                </div>
+              {analyzingChart === 'expense' ? '分析中...' : expenseAnalysis ? '重新分析' : 'AI分析'}
+            </Button>
+          </div>
         </div>
 
         {expenseAnalysis && (

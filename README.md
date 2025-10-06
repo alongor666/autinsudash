@@ -253,24 +253,6 @@ src/
 └── lib/              # 辅助函数、类型定义和工具
 ```
 
-## 部署到 GitHub Pages
-
-本项目已配置静态导出并自动部署到 GitHub Pages：
-
-- 静态导出：`next.config.ts` 设置 `output: 'export'`
-- Pages 工作流：`.github/workflows/deploy-pages.yml`
-- 构建输出目录：`out/`
-- 由于为静态站点，所有 `/api` 路由不可用；在静态预览模式下，图表上的 AI 分析按钮会提示禁用。
-
-手动构建与本地预览：
-
-1. 设置环境变量以模拟 Pages：
-   - macOS/Linux：`export NEXT_PUBLIC_GITHUB_PAGES=true NEXT_PUBLIC_STATIC_EXPORT=true BASE_PATH=/autinsudash ASSET_PREFIX=/autinsudash`
-   - Windows PowerShell：`$env:NEXT_PUBLIC_GITHUB_PAGES='true'; $env:NEXT_PUBLIC_STATIC_EXPORT='true'; $env:BASE_PATH='/autinsudash'; $env:ASSET_PREFIX='/autinsudash'`
-2. 执行构建：`npm run build`
-3. 在 `out/` 目录使用静态服务器预览，例如：`npx serve out`
-
-
 ### 添加新指标
 
 1. 在 `src/types/index.ts` 中定义指标类型
