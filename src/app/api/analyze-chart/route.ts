@@ -103,7 +103,7 @@ ${markupGuide}
     const outerLabel = metrics?.outer || '外环指标';
     const dimensionLabel = dimension || '维度';
 
-    const summary = (data as SunburstAnalysisDatum[]).slice(0, 5).map(item =>
+    const summary = (data as SunburstAnalysisDatum[]).slice(0, 10).map(item =>
       `${item.category}: ${innerLabel}=${item.innerValue.toFixed(0)}, ${outerLabel}=${item.outerValue.toFixed(0)}, 边际贡献率=${(item.maturedMarginalContributionRate * 100).toFixed(2)}%`
     ).join('\n');
 
@@ -111,17 +111,42 @@ ${markupGuide}
 **图表类型：** ${dimensionLabel}占比图
 **分析维度：** ${dimensionLabel}
 **指标组合：** 内环=${innerLabel}，外环=${outerLabel}
-**TOP5数据：**
+**TOP10数据：**
 ${summary}
 
-请基于以上数据，从业务表现、结构特征、优化方向三个角度进行分析。`;
+**输出示例：**
+{dim|客户类别|私家车}以{metric|签单保费|1250万}占比最高，{metric|满期边际贡献率|15.5%}表现{color|green|优秀}。
+
+关键发现：
+1. {dim|客户类别|私家车}规模领先，但{dim|业务类型|非营客车}的{metric|边际贡献率|18.2%}更具盈利性
+2. {dim|客户类别|货运车辆}的{metric|边际贡献率|3.8%}处于{color|red|红色预警区间}
+
+[DRILLDOWN]
+{dim|客户类别|私家车}细分：
+- {dim|业务类型|非营客车}: {metric|签单保费|800万}，{metric|边际贡献率|16.5%}
+- {dim|业务类型|单位客车}: {metric|签单保费|450万}，{metric|边际贡献率|14.2%}
+[/DRILLDOWN]
+
+[LEVEL2]
+{dim|业务类型|非营客车}机构分布：
+- {org|三级机构|营业部A}: {metric|签单保费|320万}，{metric|边际贡献率|18.5%}
+- {org|三级机构|营业部B}: {metric|签单保费|280万}，{metric|边际贡献率|15.2%}
+[/LEVEL2]
+
+[LEVEL3]
+{org|三级机构|营业部A}险别结构：
+- {dim|险别组合|车损险+三者险}: {metric|签单保费|180万}，{metric|边际贡献率|20.1%}
+- {dim|险别组合|单三者险}: {metric|签单保费|140万}，{metric|边际贡献率|16.8%}
+[/LEVEL3]
+
+请严格按照上述格式和标记语法输出分析报告。`;
   }
 
   if (chartType === 'bar') {
     const metricLabel = metrics?.metric || '指标';
     const dimensionLabel = dimension || '维度';
 
-    const summary = (data as BarAnalysisDatum[]).slice(0, 5).map(item =>
+    const summary = (data as BarAnalysisDatum[]).slice(0, 10).map(item =>
       `${item.dimension}: ${item.value.toFixed(0)}, 边际贡献率=${(item.marginalRate * 100).toFixed(2)}%`
     ).join('\n');
 
@@ -129,16 +154,41 @@ ${summary}
 **图表类型：** ${dimensionLabel}对比图
 **分析维度：** ${dimensionLabel}
 **对比指标：** ${metricLabel}
-**TOP5数据：**
+**TOP10数据：**
 ${summary}
 
-请基于以上数据，从业务分布、差异原因、改进机会三个角度进行分析。`;
+**输出示例：**
+{dim|${dimensionLabel}|排名第一}的{metric|${metricLabel}|1250万}领先，{metric|满期边际贡献率|15.5%}处于{color|green|绿色优秀区间}，较第二名{change|rise|+350万}。
+
+关键发现：
+1. 前三名贡献了总量的65%，但{metric|边际贡献率|差异达10pp}
+2. 排名靠后的{dim|${dimensionLabel}|某项}虽规模小但{metric|边际贡献率|18.2%}{color|green|盈利性强}
+
+[DRILLDOWN]
+{dim|${dimensionLabel}|排名第一}客户类别细分：
+- {dim|客户类别|私家车}: {metric|${metricLabel}|800万}，{metric|边际贡献率|16.5%}
+- {dim|客户类别|单位客车}: {metric|${metricLabel}|450万}，{metric|边际贡献率|14.2%}
+[/DRILLDOWN]
+
+[LEVEL2]
+{dim|客户类别|私家车}业务类型分布：
+- {dim|业务类型|非营客车}: {metric|${metricLabel}|520万}，{metric|边际贡献率|17.8%}
+- {dim|业务类型|其他}: {metric|${metricLabel}|280万}，{metric|边际贡献率|15.2%}
+[/LEVEL2]
+
+[LEVEL3]
+{dim|业务类型|非营客车}机构与险别：
+- {org|三级机构|营业部A} {dim|险别|车损+三者}: {metric|${metricLabel}|180万}，{metric|边际贡献率|19.5%}
+- {org|三级机构|营业部B} {dim|险别|单三者}: {metric|${metricLabel}|140万}，{metric|边际贡献率|16.8%}
+[/LEVEL3]
+
+请严格按照上述格式和标记语法输出分析报告。`;
   }
 
   if (chartType === 'expense') {
     const dimensionLabel = dimension || '维度';
 
-    const summary = (data as ExpenseAnalysisDatum[]).slice(0, 5).map(item =>
+    const summary = (data as ExpenseAnalysisDatum[]).slice(0, 10).map(item =>
       `${item.dimension}: 贡献=${(item.contribution / 10000).toFixed(0)}万, 实际费用率=${(item.actualRate * 100).toFixed(2)}%, 与基准差异=${(item.deltaRate * 100).toFixed(2)}%`
     ).join('\n');
 
@@ -146,10 +196,35 @@ ${summary}
 **图表类型：** ${dimensionLabel}费用结余图
 **分析维度：** ${dimensionLabel}
 **基准费用率：** 14%
-**TOP5数据：**
+**TOP10数据：**
 ${summary}
 
-请基于以上数据，从费用效率、成本管控、优化潜力三个角度进行分析。`;
+**输出示例：**
+{dim|${dimensionLabel}|排名第一}的{metric|费用率|12.5%}低于基准线{change|drop|-1.5pp}，{metric|边际贡献率|16.8%}表现{color|green|优秀}，费用管控{color|green|有效}。
+
+关键发现：
+1. 有3个${dimensionLabel}超基准线，其中{dim|${dimensionLabel}|某项}{metric|费用率|18.2%}{change|rise|+4.2pp}
+2. {dim|${dimensionLabel}|表现优秀项}费用率仅{metric|费用率|10.5%}，可作为标杆
+
+[DRILLDOWN]
+{dim|${dimensionLabel}|费用超标项}客户类别分析：
+- {dim|客户类别|货运车辆}: {metric|费用率|22.5%}，主要是{dim|费用类型|手续费}过高
+- {dim|客户类别|私家车}: {metric|费用率|15.8%}，{dim|费用类型|宣传费}偏高
+[/DRILLDOWN]
+
+[LEVEL2]
+{dim|客户类别|货运车辆}业务类型细分：
+- {dim|业务类型|营业货运}: {metric|费用率|25.2%}，{change|rise|严重超标}
+- {dim|业务类型|非营货车}: {metric|费用率|19.8%}，{change|rise|中度超标}
+[/LEVEL2]
+
+[LEVEL3]
+{dim|业务类型|营业货运}机构与险别：
+- {org|三级机构|营业部C} {dim|险别|车损+三者}: {metric|费用率|28.5%}，{color|red|需重点整改}
+- {org|三级机构|营业部D} {dim|险别|单三者}: {metric|费用率|22.8%}，手续费率过高
+[/LEVEL3]
+
+请严格按照上述格式和标记语法输出分析报告。`;
   }
 
   return baseContext + '数据格式不支持';

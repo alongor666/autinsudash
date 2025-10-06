@@ -45,7 +45,7 @@ import {
   dimensionGroups,
 } from "@/components/dashboard/customer-performance";
 import { getMarginalContributionColor } from "@/lib/color-scale";
-import { convertTextToHtml } from "@/lib/utils";
+import { parseAIMarkup } from "@/lib/ai-markup";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Sparkles } from "lucide-react";
 import {
@@ -862,8 +862,8 @@ export function WeeklyTrendChart() {
         )}
 
         {analysis && (
-          <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-2">
-            <div dangerouslySetInnerHTML={{ __html: convertTextToHtml(analysis) }} />
+          <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-3">
+            <div dangerouslySetInnerHTML={{ __html: parseAIMarkup(analysis) }} />
           </div>
         )}
       </CardContent>

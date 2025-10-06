@@ -27,7 +27,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getExpenseContributionColor, getMarginalContributionColor } from "@/lib/color-scale";
-import { normalizeEnergyType, normalizeTransferStatus, convertTextToHtml } from "@/lib/utils";
+import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
+import { parseAIMarkup } from "@/lib/ai-markup";
 import type { RawDataRow } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -1273,8 +1274,8 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground/70">{sunburstExplanation}</p>
             {sunburstAnalysis && (
-              <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-2">
-                <div dangerouslySetInnerHTML={{ __html: convertTextToHtml(sunburstAnalysis) }} />
+              <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-3">
+                <div dangerouslySetInnerHTML={{ __html: parseAIMarkup(sunburstAnalysis) }} />
               </div>
             )}
           </div>
@@ -1690,8 +1691,8 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground/70">{expenseExplanation}</p>
           {expenseAnalysis && (
-            <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-2">
-              <div dangerouslySetInnerHTML={{ __html: convertTextToHtml(expenseAnalysis) }} />
+            <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-3">
+              <div dangerouslySetInnerHTML={{ __html: parseAIMarkup(expenseAnalysis) }} />
             </div>
           )}
         </div>

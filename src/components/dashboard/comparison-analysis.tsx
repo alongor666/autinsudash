@@ -31,7 +31,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getMarginalContributionColor } from "@/lib/color-scale";
-import { normalizeEnergyType, normalizeTransferStatus, convertTextToHtml } from "@/lib/utils";
+import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
+import { parseAIMarkup } from "@/lib/ai-markup";
 import type { RawDataRow } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -845,8 +846,8 @@ export function ComparisonAnalysisChart() {
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground/70">{barExplanation}</p>
           {barAnalysis && (
-            <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-2">
-              <div dangerouslySetInnerHTML={{ __html: convertTextToHtml(barAnalysis) }} />
+            <div className="rounded-md bg-muted/50 p-3 text-sm leading-relaxed space-y-3">
+              <div dangerouslySetInnerHTML={{ __html: parseAIMarkup(barAnalysis) }} />
             </div>
           )}
         </div>
