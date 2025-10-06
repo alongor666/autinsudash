@@ -1,4 +1,5 @@
 import type { RawDataRow } from './types';
+import { normalizeVehicleAttributes } from './utils';
 
 // Based on README.md
 const CSV_HEADERS = [
@@ -75,11 +76,35 @@ export function parseCSV(file: File): Promise<RawDataRow[]> {
         return reject(new Error("CSV 文件为空或只有标题行。"));
       }
       
-      const header = lines[0].split(',').map(h => h.trim());
-      // Basic header validation
-      if (JSON.stringify(header) !== JSON.stringify(CSV_HEADERS)) {
-         console.warn("CSV header mismatch:", header, CSV_HEADERS);
-         return reject(new Error("CSV 文件头与预期格式不匹配。请下载模板以确保格式正确。"));
+      const header = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      // Basic header validation - 更灵活的头部验证
+      const headerMismatch = header.length !== CSV_HEADERS.length || 
+        !header.every((h, i) => h.toLowerCase() === CSV_HEADERS[i].toLowerCase());
+      
+      if (headerMismatch) {
+         console.warn("CSV header mismatch:");
+         console.warn("实际文件头:", header);
+         console.warn("预期文件头:", CSV_HEADERS);
+         console.warn("文件头长度:", header.length, "vs", CSV_HEADERS.length);
+         
+         // 提供更详细的错误信息
+         const missingHeaders = CSV_HEADERS.filter(expected => 
+           !header.some(actual => actual.toLowerCase() === expected.toLowerCase())
+         );
+         const extraHeaders = header.filter(actual => 
+           !CSV_HEADERS.some(expected => expected.toLowerCase() === actual.toLowerCase())
+         );
+         
+         let errorMessage = "CSV 文件头与预期格式不匹配。请下载模板以确保格式正确。\n\n";
+         if (missingHeaders.length > 0) {
+           errorMessage += `缺少字段: ${missingHeaders.join(', ')}\n`;
+         }
+         if (extraHeaders.length > 0) {
+           errorMessage += `多余字段: ${extraHeaders.join(', ')}\n`;
+         }
+         errorMessage += `\n预期字段数量: ${CSV_HEADERS.length}，实际字段数量: ${header.length}`;
+         
+         return reject(new Error(errorMessage));
       }
 
       const data: RawDataRow[] = [];
@@ -107,7 +132,7 @@ export function parseCSV(file: File): Promise<RawDataRow[]> {
 
          // Ensure all required fields are present after parsing the row
         if (header.length === Object.keys(rowObject).length) {
-            data.push(rowObject as RawDataRow);
+            data.push(normalizeVehicleAttributes(rowObject as RawDataRow));
         }
       }
       resolve(data);
@@ -122,25 +147,76 @@ export function parseCSV(file: File): Promise<RawDataRow[]> {
 }
 
 export function exportToCSV(data: RawDataRow[], filename: string) {
-    if (data.length === 0) return;
+  const headers = CSV_HEADERS.join(',');
+  const rows = data.map(row => 
+    CSV_HEADERS.map(header => {
+      const value = row[header as keyof RawDataRow];
+      return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
+    }).join(',')
+  );
+  
+  const csvContent = [headers, ...rows].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+}
 
-    const headers = Object.keys(data[0]) as (keyof RawDataRow)[];
-    const csvRows = [
-        headers.join(','), 
-        ...data.map(row => 
-            headers.map(fieldName => JSON.stringify(row[fieldName], (key, value) => value === null ? '' : value)).join(',')
-        )
-    ];
-
-    const blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+/**
+ * 导出CSV模板文件，包含所有必需的列头
+ * @param filename 模板文件名
+ */
+export function exportCSVTemplate(filename: string = 'csv_template.csv') {
+  const headers = CSV_HEADERS.join(',');
+  // 添加一行示例数据作为参考
+  const sampleRow = [
+    '2024-01-01', // snapshot_date
+    '2024', // policy_start_year
+    '车险', // business_type_category
+    '成都分公司', // chengdu_branch
+    '营业部A', // third_level_organization
+    '个人客户', // customer_category_3
+    '交强险', // insurance_type
+    '燃油', // is_new_energy_vehicle
+    '基本险', // coverage_type
+    '非过户', // is_transferred_vehicle
+    '续保', // renewal_status
+    'A', // vehicle_insurance_grade
+    '低风险', // highway_risk_grade
+    '0', // large_truck_score
+    '0', // small_truck_score
+    '线上', // terminal_source
+    '5000', // signed_premium_yuan
+    '5000', // matured_premium_yuan
+    '1', // policy_count
+    '0', // claim_case_count
+    '0', // reported_claim_payment_yuan
+    '500', // expense_amount_yuan
+    '5500', // commercial_premium_before_discount_yuan
+    '5000', // premium_plan_yuan
+    '4500', // marginal_contribution_amount_yuan
+    '1' // week_number
+  ].join(',');
+  
+  const csvContent = [headers, sampleRow].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
 }

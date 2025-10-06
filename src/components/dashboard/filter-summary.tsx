@@ -16,9 +16,13 @@ function getLatestSnapshotDate(data: RawDataRow[]): Date | null {
   if (validDates.length === 0) {
     return null;
   }
-  
-  const latestDate = new Date(Math.max(...validDates.map(date => date.getTime())));
-  return latestDate;
+
+  const latestTimestamp = validDates.reduce((max, date) => {
+    const time = date.getTime();
+    return time > max ? time : max;
+  }, validDates[0].getTime());
+
+  return new Date(latestTimestamp);
 }
 
 function getCustomerCategoryCombination(selectedCategories: string[], allCategories: string[]): string {
@@ -41,11 +45,25 @@ function getCustomerCategoryCombination(selectedCategories: string[], allCategor
     return selectedCategories.join('、');
 }
 
+function formatWeekSelection(weeks: string[] | null): string {
+  if (!weeks || weeks.length === 0) {
+    return '';
+  }
+  const uniqueWeeks = Array.from(new Set(weeks));
+  const sortedWeeks = uniqueWeeks.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+  if (sortedWeeks.length === 1) {
+    return `第${sortedWeeks[0]}周`;
+  }
+  const first = sortedWeeks[0];
+  const last = sortedWeeks[sortedWeeks.length - 1];
+  return `第${first}-${last}周`;
+}
+
 
 function generateSummaryText(filters: Filters, allCustomerCategories: string[]): string {
     const orgPart = filters.region || '四川分公司';
     const yearPart = filters.year ? `${filters.year}年` : '';
-    const weekPart = filters.weekNumber ? `第${filters.weekNumber}周` : '';
+    const weekPart = formatWeekSelection(filters.weekNumber);
 
     const insuranceTypes = (filters.insuranceTypes || []).join('、');
 
@@ -54,7 +72,7 @@ function generateSummaryText(filters: Filters, allCustomerCategories: string[]):
     let description = [yearPart, weekPart, customerCategoryPart].filter(Boolean).join(' ');
 
     if (insuranceTypes) {
-      description = `${yearPart} ${weekPart} ${insuranceTypes}${customerCategoryPart ? `(${customerCategoryPart})` : ''}`.trim();
+      description = `${yearPart} ${weekPart} ${insuranceTypes}${customerCategoryPart ? `(${customerCategoryPart})` : ''}`.replace(/\s+/g, ' ').trim();
     }
 
     if (!description && filters.year) {
@@ -79,7 +97,7 @@ export function FilterSummary() {
   useEffect(() => {
     // If a week is selected, find the snapshot date from the filtered data.
     // Otherwise, find the latest date from all raw data.
-    const dataForDate = filters.weekNumber ? filteredData : rawData;
+    const dataForDate = filters.weekNumber && filters.weekNumber.length ? filteredData : rawData;
     setDisplayDate(getLatestSnapshotDate(dataForDate));
   }, [rawData, filteredData, filters.weekNumber]);
 

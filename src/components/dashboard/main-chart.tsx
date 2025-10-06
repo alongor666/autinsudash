@@ -31,8 +31,8 @@ export function MainChart() {
         <CardDescription>{mainInsight}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <ChartContainer config={chartConfig} className="h-[300px] w-full">
-          <ComposedChart accessibilityLayer data={chartData}>
+        <ChartContainer config={chartConfig} className="h-[340px] w-full">
+          <ComposedChart accessibilityLayer data={chartData} margin={{ top: 24, right: 16, bottom: 8, left: 16 }}>
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="week_number"

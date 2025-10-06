@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: '车险洞察仪表板',
-  description: '一个用于分析车险数据的智能仪表板',
+  title: '车险智能仪表盘',
+  description: '一个融入AI技术的车险数据智能分析平台，提供实时洞察和预测分析',
 };
 
 export default function RootLayout({

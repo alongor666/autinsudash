@@ -7,14 +7,19 @@ export type Kpi = {
   change: string;
   changeType: 'increase' | 'decrease';
   description: string;
+  previousValue?: string;
+  changeValue?: string;
+  currentRawValue?: number;
+  previousRawValue?: number;
 };
 
 export type FilterOptions = {
   years: string[];
   regions: string[];
   insuranceTypes: string[];
+  businessTypes: string[];
   customerCategories: string[];
-  newEnergyStatus: string[];
+  energyTypes: string[];
   weekNumbers: string[];
   transferredStatus: string[];
   coverageTypes: string[];
@@ -31,16 +36,17 @@ export type CustomerCategoryAlias = {
 export type Filters = {
   year: string | null;
   region: string[] | null;
-  weekNumber: string | null;
+  weekNumber: string[] | null;
   customerCategories: string[] | null;
   insuranceTypes: string[] | null;
-  newEnergyStatus: string[] | null;
+  businessTypes: string[] | null;
+  energyTypes: string[] | null;
   transferredStatus: string[] | null;
   coverageTypes: string[] | null;
 }
 
 export type SuggestedFilter = {
-    dimension: keyof Omit<Filters, 'customerCategories' | 'insuranceTypes' | 'newEnergyStatus' | 'transferredStatus' | 'coverageTypes'> | 'customer_category_3' | 'insurance_type' | 'is_new_energy_vehicle' | 'is_transferred_vehicle' | 'coverage_type';
+    dimension: keyof Omit<Filters, 'customerCategories' | 'insuranceTypes' | 'energyTypes' | 'transferredStatus' | 'coverageTypes'> | 'customer_category_3' | 'insurance_type' | 'is_new_energy_vehicle' | 'is_transferred_vehicle' | 'coverage_type';
     value: string;
 }
 

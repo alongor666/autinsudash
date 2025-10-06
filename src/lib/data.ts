@@ -39,6 +39,7 @@ export const filterOptions: FilterOptions = {
   years: ['2025', '2024', '2023'],
   regions: ['天府', '高新', '青羊', '宜宾', '德阳', '新都', '乐山', '金牛', '武侯', '锦江', '成华', '双流', '温江'],
   insuranceTypes: ['交强险', '商业保险'],
+  businessTypes: [],
   customerCategories: [
     '非营业个人客车',
     '非营业企业客车',
@@ -52,9 +53,9 @@ export const filterOptions: FilterOptions = {
     '特种车',
     '摩托车',
   ],
-  newEnergyStatus: ['是', '否'],
+  energyTypes: ['新能源', '燃油'],
   weekNumbers: [],
-  transferredStatus: ['是', '否'],
+  transferredStatus: ['过户', '非过户'],
   coverageTypes: ['交三', '主全', '单交'],
 };
 

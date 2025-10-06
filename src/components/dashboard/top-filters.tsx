@@ -1,6 +1,9 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+
+import React, { useEffect, useMemo, useState } from 'react';
 import { useData } from '@/contexts/data-context';
+import type { Filters } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -8,79 +11,83 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from '../ui/scroll-area';
-import type { Filters } from '@/lib/types';
-import { useToast } from '@/hooks/use-toast';
-import { customerCategoryCombinations } from '@/lib/data';
-import { SheetHeader, SheetTitle } from '../ui/sheet';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 
 interface TopFiltersProps {
   onApply: () => void;
 }
 
+const weekLabel = (week: string) => `第 ${week} 周`;
+
 export function TopFilters({ onApply }: TopFiltersProps) {
   const { filterOptions, filters, setFilters } = useData();
-  const [draftFilters, setDraftFilters] = useState<Filters>(filters);
   const { toast } = useToast();
+  const [draftFilters, setDraftFilters] = useState<Filters>(filters);
 
   useEffect(() => {
     setDraftFilters(filters);
   }, [filters]);
 
+  const yearOptions = useMemo(() => filterOptions.years || [], [filterOptions.years]);
+  const weekOptions = useMemo(() => filterOptions.weekNumbers || [], [filterOptions.weekNumbers]);
+  const regionOptions = useMemo(() => filterOptions.regions || [], [filterOptions.regions]);
+
   const handleSingleSelectChange = (dimension: keyof Filters, value: string) => {
-    setDraftFilters(prev => ({ ...prev, [dimension]: value === 'all' ? null : value }));
+    setDraftFilters((prev) => ({ ...prev, [dimension]: value === 'all' ? null : value }));
   };
 
   const handleMultiSelectChange = (dimension: keyof Filters, value: string, checked: boolean) => {
-    const currentValues = (draftFilters[dimension] as string[] | null) || [];
-    const newValues = checked
-      ? [...currentValues, value]
-      : currentValues.filter((v) => v !== value);
+    const allOptions = dimension === 'region' ? regionOptions : weekOptions;
+    const currentRaw = draftFilters[dimension];
+    const current = Array.isArray(currentRaw) ? currentRaw : allOptions;
 
-    const allOptionsForDimension = filterOptions[dimension as keyof typeof filterOptions] as string[];
-    
-    // If all options are selected, treat as "all" (null)
-    if (newValues.length === allOptionsForDimension?.length) {
-      setDraftFilters(prev => ({ ...prev, [dimension]: null }));
+    const updated = checked
+      ? Array.from(new Set([...current, value]))
+      : current.filter((item) => item !== value);
+
+    const sanitized = updated.filter((item) => allOptions.includes(item));
+    const sorted = sanitized.sort((a, b) => allOptions.indexOf(a) - allOptions.indexOf(b));
+
+    if (sorted.length === allOptions.length) {
+      setDraftFilters((prev) => ({ ...prev, [dimension]: null }));
     } else {
-      setDraftFilters(prev => ({ ...prev, [dimension]: newValues }));
+      setDraftFilters((prev) => ({ ...prev, [dimension]: sorted }));
     }
   };
 
-
-  const handleCustomerCategoryCombinationClick = (combinationName: string) => {
-    const combination = customerCategoryCombinations.find(c => c.name === combinationName);
-    if (!combination) return;
-
-    const allCategories = filterOptions.customerCategories;
-    let newSelection: string[] = [];
-
-    if (combination.name === '私家车') {
-      newSelection = ['非营业个人客车'].filter(c => allCategories.includes(c));
-    } else if (combination.name === '单位客车') {
-      newSelection = ['非营业企业客车', '非营业机关客车'].filter(c => allCategories.includes(c));
-    } else if (combination.name === '非营客车组合') {
-      newSelection = ['非营业个人客车', '非营业企业客车', '非营业机关客车'].filter(c => allCategories.includes(c));
-    } else if (combination.name === '营业客运') {
-      newSelection = ['营业城市公交', '营业公路客运', '营业出租租赁'].filter(c => allCategories.includes(c));
-    } else if (combination.name === '货运车辆') {
-      newSelection = ['营业货车', '挂车'].filter(c => allCategories.includes(c));
-    } else if (combination.name === '非营货车') {
-      newSelection = ['非营业货车'].filter(c => allCategories.includes(c));
-    } else if (combination.name === '特种车辆') {
-      newSelection = ['特种车'].filter(c => allCategories.includes(c));
-    } else if (combination.name === '摩托车业务') {
-      newSelection = ['摩托车'].filter(c => allCategories.includes(c));
-    } else if (combination.name === '不含摩托车') {
-      newSelection = allCategories.filter(c => c !== '摩托车');
+  const selectedRegions = useMemo(() => {
+    if (draftFilters.region === null) {
+      return new Set(regionOptions);
     }
+    return new Set(draftFilters.region);
+  }, [draftFilters.region, regionOptions]);
 
-    setDraftFilters(prev => ({ ...prev, customerCategories: newSelection }));
+  const toggleRegion = (value: string) => {
+    const shouldSelect = !selectedRegions.has(value);
+    handleMultiSelectChange('region', value, shouldSelect);
   };
 
+  const selectOnlyRegion = (value: string) => {
+    setDraftFilters((prev) => ({ ...prev, region: [value] }));
+  };
+
+  const selectAllRegions = () => {
+    setDraftFilters((prev) => ({ ...prev, region: null }));
+  };
+
+  const clearRegions = () => {
+    setDraftFilters((prev) => ({ ...prev, region: [] }));
+  };
+
+  const invertRegions = () => {
+    const inverted = regionOptions.filter((item) => !selectedRegions.has(item));
+    setDraftFilters((prev) => ({ ...prev, region: inverted.length === regionOptions.length ? null : inverted }));
+  };
 
   const applyFilters = () => {
     setFilters(draftFilters);
@@ -92,147 +99,160 @@ export function TopFilters({ onApply }: TopFiltersProps) {
   };
 
   const resetFilters = () => {
-    const initialFilters = {
-        year: filterOptions.years[0] || null,
-        region: null,
-        weekNumber: null,
-        customerCategories: null,
-        insuranceTypes: null,
-        newEnergyStatus: null,
-        transferredStatus: null,
-        coverageTypes: null,
-    };
-    setDraftFilters(initialFilters);
+    setDraftFilters({
+      year: yearOptions[0] || null,
+      weekNumber: null,
+      region: null,
+      customerCategories: null,
+      insuranceTypes: null,
+      energyTypes: null,
+      transferredStatus: null,
+      coverageTypes: null,
+    });
   };
-  
-  const binaryOptionMap: Record<string, string> = {
-    '交强险': '交',
-    '商业险': '商',
-  }
+
+  const selectedWeeks = useMemo(() => {
+    if (draftFilters.weekNumber === null) {
+      return new Set(weekOptions);
+    }
+    return new Set(draftFilters.weekNumber);
+  }, [draftFilters.weekNumber, weekOptions]);
 
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div className="flex h-full flex-col bg-white/80">
       <SheetHeader>
         <SheetTitle className="sr-only">智能筛选</SheetTitle>
       </SheetHeader>
-      <div className="flex items-center justify-between border-b p-4">
-        <h3 className="text-lg font-semibold">智能筛选</h3>
+      <div className="flex items-center justify-between border-b panel-surface px-6 py-4">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">智能筛选</h3>
+          <p className="text-xs text-muted-foreground/70">聚焦保单年度、周序号与三级机构，精简筛选更高效。</p>
+        </div>
         <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={resetFilters}>重置</Button>
-            <Button size="sm" onClick={applyFilters}>应用筛选</Button>
+          <Button variant="ghost" size="sm" onClick={resetFilters}>重置</Button>
+          <Button size="sm" onClick={applyFilters}>应用筛选</Button>
         </div>
       </div>
-      <ScrollArea className="flex-1">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4">
-          {/* Column 1: Short lists */}
-          <div className="space-y-6 flex flex-col">
-            <div className="space-y-2">
-              <Label>保单年度</Label>
-              <Select onValueChange={(v) => handleSingleSelectChange('year', v)} value={draftFilters.year || 'all'}>
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent>
+      <div className="flex flex-1 flex-col gap-6 px-6 py-6">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,260px)_1fr]">
+          <div className="space-y-6 rounded-2xl border panel-surface p-5 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-foreground">保单年度</Label>
+              <Select onValueChange={(value) => handleSingleSelectChange('year', value)} value={draftFilters.year || 'all'}>
+                <SelectTrigger className="h-10 rounded-xl border-white/60 bg-white/80 shadow-inner">
+                  <SelectValue placeholder="全部" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-white/60 bg-white/95">
                   <SelectItem value="all">全部</SelectItem>
-                  {(filterOptions.years || []).map((o) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}
+                  {yearOptions.map((option) => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>周序号</Label>
-              <Select onValueChange={(v) => handleSingleSelectChange('weekNumber', v)} value={draftFilters.weekNumber || 'all'}>
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent>
-                    <ScrollArea className="h-40">
-                        <SelectItem value="all">全部</SelectItem>
-                        {(filterOptions.weekNumbers || []).map((o) => (<SelectItem key={o} value={o}>{`第 ${o} 周`}</SelectItem>))}
-                    </ScrollArea>
-                </SelectContent>
-              </Select>
-            </div>
-             <div className="space-y-2">
-              <Label>车险种类</Label>
-              <div className="flex items-center space-x-4 pt-1">
-                {(filterOptions.insuranceTypes || []).map((option) => (
-                    <div key={option} className="flex items-center space-x-2">
-                    <Checkbox id={`it-${option}`} checked={draftFilters.insuranceTypes === null || draftFilters.insuranceTypes.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('insuranceTypes', option, !!c)} />
-                    <Label htmlFor={`it-${option}`} className="font-normal">{binaryOptionMap[option] || option}</Label>
-                    </div>
-                ))}
+
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-foreground">周序号</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-full px-4 text-xs"
+                  onClick={() => setDraftFilters((prev) => ({ ...prev, weekNumber: null }))}
+                >全部</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-full px-4 text-xs"
+                  disabled={weekOptions.length === 0}
+                  onClick={() => {
+                    if (!weekOptions.length) return;
+                    setDraftFilters((prev) => ({ ...prev, weekNumber: [weekOptions[weekOptions.length - 1]] }));
+                  }}
+                >最新周</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-full px-4 text-xs"
+                  disabled={weekOptions.length === 0}
+                  onClick={() => {
+                    if (!weekOptions.length) return;
+                    const recent = weekOptions.slice(-4);
+                    setDraftFilters((prev) => ({ ...prev, weekNumber: recent }));
+                  }}
+                >最近4周</Button>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>是否新能源</Label>
-              <div className="flex items-center space-x-4 pt-1">
-                {(filterOptions.newEnergyStatus || []).map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <Checkbox id={`nes-${option}`} checked={draftFilters.newEnergyStatus === null || draftFilters.newEnergyStatus.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('newEnergyStatus', option, !!c)} />
-                    <Label htmlFor={`nes-${option}`} className="font-normal">{option}</Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>是否过户车</Label>
-              <div className="flex items-center space-x-4 pt-1">
-                {(filterOptions.transferredStatus || []).map((option) => (
-                  <div key={option} className="flex items-center space-x-2">
-                    <Checkbox id={`ts-${option}`} checked={draftFilters.transferredStatus === null || draftFilters.transferredStatus.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('transferredStatus', option, !!c)} />
-                    <Label htmlFor={`ts-${option}`} className="font-normal">{option === '是' ? '过户' : '非过户'}</Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2 flex-1 flex flex-col">
-              <Label>险别组合</Label>
-                <ScrollArea className="flex-1 h-32 rounded-md border p-2">
-                {(filterOptions.coverageTypes || []).map((option) => (
-                    <div key={option} className="flex items-center space-x-2 p-1">
-                    <Checkbox id={`ct-${option}`} checked={draftFilters.coverageTypes === null || draftFilters.coverageTypes.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('coverageTypes', option, !!c)} />
-                    <Label htmlFor={`ct-${option}`} className="font-normal">{option}</Label>
-                    </div>
-                ))}
-                </ScrollArea>
+              <ScrollArea className="h-36 rounded-xl border panel-surface p-3">
+                <div className="grid gap-2">
+                  {weekOptions.map((option) => {
+                    const checked = selectedWeeks.has(option);
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        className={cn(
+                          'flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-all duration-200',
+                          checked ? 'bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-fuchsia-500/10 text-violet-600' : 'hover:bg-white'
+                        )}
+                        onClick={() => handleMultiSelectChange('weekNumber', option, !checked)}
+                      >
+                        <span>{weekLabel(option)}</span>
+                        <Checkbox checked={checked} className="pointer-events-none" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             </div>
           </div>
-          {/* Column 2: Regions */}
-          <div className="space-y-2 flex flex-col">
-             <Label>三级机构</Label>
-             <ScrollArea className="flex-1 rounded-md border">
-                 <div className="p-2">
-                 {(filterOptions.regions || []).map((option) => (
-                     <div key={option} className="flex items-center space-x-2 p-1">
-                     <Checkbox id={`region-${option}`} 
-                         checked={draftFilters.region === null || draftFilters.region.includes(option)} 
-                         onCheckedChange={(c) => handleMultiSelectChange('region', option, !!c)} />
-                     <Label htmlFor={`region-${option}`} className="font-normal">{option}</Label>
-                     </div>
-                 ))}
-                 </div>
-             </ScrollArea>
-           </div>
-          {/* Column 3: Business Types */}
-          <div className="space-y-2 flex flex-col">
-            <Label>客户类别</Label>
-            <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">智能切片</p>
-                <div className="flex flex-wrap gap-2">
-                    {customerCategoryCombinations.map(combination => (
-                    <Button key={combination.name} variant="outline" size="sm" onClick={() => handleCustomerCategoryCombinationClick(combination.name)}>
-                        {combination.name}
-                    </Button>
-                    ))}
-                </div>
+
+          <div className="flex flex-col gap-4 rounded-2xl border panel-surface p-5 shadow-[0_28px_70px_rgba(15,23,42,0.1)] backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium text-foreground">三级机构</Label>
+                <p className="text-xs text-muted-foreground/70">支持单选、多选与一键反选。</p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-xs" onClick={selectAllRegions}>全选</Button>
+                <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-xs" onClick={clearRegions}>清空</Button>
+                <Button variant="ghost" size="sm" className="h-8 rounded-full px-3 text-xs" onClick={invertRegions}>反选</Button>
+              </div>
             </div>
-            <ScrollArea className="flex-1 rounded-md border p-2">
-            {(filterOptions.customerCategories || []).map((option) => (
-                <div key={option} className="flex items-center space-x-2 p-1">
-                <Checkbox id={`cc-${option}`} checked={draftFilters.customerCategories === null || draftFilters.customerCategories.includes(option)} onCheckedChange={(c) => handleMultiSelectChange('customerCategories', option, !!c)} />
-                <Label htmlFor={`cc-${option}`} className="font-normal">{option}</Label>
-                </div>
-            ))}
+            <ScrollArea className="h-[320px] rounded-xl border panel-surface p-3">
+              <div className="grid gap-2">
+                {regionOptions.map((option) => {
+                  const active = selectedRegions.has(option);
+                  return (
+                    <div
+                      key={option}
+                      className="group flex items-center justify-between rounded-lg bg-transparent px-3 py-2 transition-colors hover:bg-white"
+                    >
+                      <button
+                        type="button"
+                        className={cn(
+                          'flex flex-1 items-center gap-3 text-sm transition-colors',
+                          active ? 'text-violet-600' : 'text-muted-foreground hover:text-foreground'
+                        )}
+                        onClick={() => toggleRegion(option)}
+                      >
+                        <Checkbox checked={active} className="pointer-events-none" />
+                        <span>{option}</span>
+                      </button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 rounded-full px-2 text-xs text-muted-foreground/80 opacity-0 transition-opacity group-hover:opacity-100"
+                        onClick={() => selectOnlyRegion(option)}
+                      >仅此</Button>
+                    </div>
+                  );
+                })}
+              </div>
             </ScrollArea>
           </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
