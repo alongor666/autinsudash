@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useData } from '@/contexts/data-context';
 import type { Filters } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -37,11 +37,11 @@ export function TopFilters({ onApply }: TopFiltersProps) {
   const weekOptions = useMemo(() => filterOptions.weekNumbers || [], [filterOptions.weekNumbers]);
   const regionOptions = useMemo(() => filterOptions.regions || [], [filterOptions.regions]);
 
-  const handleSingleSelectChange = (dimension: keyof Filters, value: string) => {
+  const handleSingleSelectChange = useCallback((dimension: keyof Filters, value: string) => {
     setDraftFilters((prev) => ({ ...prev, [dimension]: value === 'all' ? null : value }));
-  };
+  }, []);
 
-  const handleMultiSelectChange = (dimension: keyof Filters, value: string, checked: boolean) => {
+  const handleMultiSelectChange = useCallback((dimension: keyof Filters, value: string, checked: boolean) => {
     const allOptions = dimension === 'region' ? regionOptions : weekOptions;
     const currentRaw = draftFilters[dimension];
     const current = Array.isArray(currentRaw) ? currentRaw : allOptions;
@@ -58,7 +58,7 @@ export function TopFilters({ onApply }: TopFiltersProps) {
     } else {
       setDraftFilters((prev) => ({ ...prev, [dimension]: sorted }));
     }
-  };
+  }, [regionOptions, weekOptions, draftFilters]);
 
   const selectedRegions = useMemo(() => {
     if (draftFilters.region === null) {
@@ -89,16 +89,16 @@ export function TopFilters({ onApply }: TopFiltersProps) {
     setDraftFilters((prev) => ({ ...prev, region: inverted.length === regionOptions.length ? null : inverted }));
   };
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     setFilters(draftFilters);
     toast({
       title: '筛选已应用',
       description: '仪表板已根据您的选择更新。',
     });
     onApply();
-  };
+  }, [draftFilters, setFilters, toast, onApply]);
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setDraftFilters({
       year: yearOptions[0] || null,
       weekNumber: null,
@@ -110,7 +110,7 @@ export function TopFilters({ onApply }: TopFiltersProps) {
       transferredStatus: null,
       coverageTypes: null,
     });
-  };
+  }, [yearOptions]);
 
   const selectedWeeks = useMemo(() => {
     if (draftFilters.weekNumber === null) {

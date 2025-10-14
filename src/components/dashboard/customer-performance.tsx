@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback, memo } from "react";
 import { ArrowUpDown, Copy, Sparkles } from "lucide-react";
 import {
   Cell,
@@ -607,7 +607,7 @@ type ExpenseTooltipPayload = {
 
 type AnalysisSection = 'structure' | 'expense' | 'all';
 
-export function CustomerPerformanceCharts({ section = 'all' }: { section?: AnalysisSection }) {
+function CustomerPerformanceChartsComponent({ section = 'all' }: { section?: AnalysisSection }) {
   const { filteredData, rawData } = useData();
   const { toast } = useToast();
   const showStructure = section === 'structure' || section === 'all';
@@ -949,7 +949,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
     }
   }, [expenseData.length]);
 
-  const handleCopySunburstTable = async () => {
+  const handleCopySunburstTable = useCallback(async () => {
     if (!isSunburstTable || !canCopySunburst) {
       return;
     }
@@ -983,16 +983,20 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
         description: '结构分析数据已复制到剪贴板，可直接粘贴到表格工具中。',
       });
     } catch (error) {
-      console.error('复制表格失败', error);
+      if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('复制表格失败', error);
+        }
+      }
       toast({
         variant: 'destructive',
         title: '复制失败',
         description: '浏览器未授权剪贴板权限，请手动复制。',
       });
     }
-  };
+  }, [isSunburstTable, canCopySunburst, innerMetricMeta, outerMetricMeta, sunburstTableRows, toast]);
 
-  const handleCopyExpenseTable = async () => {
+  const handleCopyExpenseTable = useCallback(async () => {
     if (!isExpenseTable || !canCopyExpense) {
       return;
     }
@@ -1017,14 +1021,18 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
         description: '费用分析数据已复制到剪贴板，可直接粘贴到表格工具中。',
       });
     } catch (error) {
-      console.error('复制表格失败', error);
+      if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('复制表格失败', error);
+        }
+      }
       toast({
         variant: 'destructive',
         title: '复制失败',
         description: '浏览器未授权剪贴板权限，请手动复制。',
       });
     }
-  };
+  }, [isExpenseTable, canCopyExpense, expenseTableRows, toast]);
 
   const sunburstInsight = useMemo(() => {
     if (!sunburstData.length) {
@@ -1191,7 +1199,11 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
         return newCache;
       });
     } catch (error) {
-      console.error('AI分析失败:', error);
+      if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('AI分析失败:', error);
+        }
+      }
       toast({
         variant: 'destructive',
         title: 'AI 分析失败',
@@ -1728,3 +1740,5 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
     </div>
   );
 }
+
+export const CustomerPerformanceCharts = memo(CustomerPerformanceChartsComponent);

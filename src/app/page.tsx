@@ -5,7 +5,7 @@ import { KpiGrid } from '@/components/dashboard/kpi-grid';
 import { WeeklyTrendChart } from '@/components/dashboard/weekly-trend';
 import { CustomerPerformanceCharts } from '@/components/dashboard/customer-performance';
 import { ComparisonAnalysisChart } from '@/components/dashboard/comparison-analysis';
-import { DataProvider } from '@/contexts/data-context';
+import { AppProviders } from '@/contexts/app-providers';
 import { FilterSummary, FilterSummaryTitle } from '@/components/dashboard/filter-summary';
 import { SettingsMenu } from '@/components/dashboard/settings-menu';
 import { cn } from '@/lib/utils';
@@ -106,7 +106,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <DataProvider>
+    <AppProviders>
       <div className="flex min-h-screen w-full flex-col">
         <DashboardHeader activeSection={activeSection} onSectionChange={setActiveSection} />
         <main className="flex-1">
@@ -131,6 +131,6 @@ export default function DashboardPage() {
           </section>
         </main>
       </div>
-    </DataProvider>
+    </AppProviders>
   );
 }

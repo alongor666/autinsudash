@@ -596,7 +596,11 @@ export function ComparisonAnalysisChart() {
         description: '对比分析数据已复制到剪贴板，可直接粘贴到表格工具中。',
       });
     } catch (error) {
-      console.error('复制表格失败', error);
+      if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('复制表格失败', error);
+        }
+      }
       toast({
         variant: 'destructive',
         title: '复制失败',
@@ -665,7 +669,11 @@ export function ComparisonAnalysisChart() {
         return newCache;
       });
     } catch (error) {
-      console.error('AI分析失败:', error);
+      if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('AI分析失败:', error);
+        }
+      }
       toast({
         variant: 'destructive',
         title: 'AI 分析失败',

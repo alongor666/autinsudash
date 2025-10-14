@@ -49,7 +49,9 @@ export function AIAnalysisDisplay({ analysis, prompt, metadata }: AIAnalysisDisp
         description: '已将分析报告（含上下文和 Prompt）复制到剪贴板',
       });
     } catch (error) {
-      console.error('复制失败:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('复制失败:', error);
+      }
       toast({
         variant: 'destructive',
         title: '复制失败',

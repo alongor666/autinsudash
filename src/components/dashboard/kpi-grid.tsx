@@ -5,7 +5,7 @@ import { useData } from '@/contexts/data-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback, memo } from 'react';
 import { AIDeteriorationAnalysis } from './ai-deterioration-analysis';
 import {
   Select,
@@ -47,35 +47,37 @@ type MetricData = {
   previousValue?: string;
 };
 
-function calculateSecondaryMetrics(currentData: RawDataRow[], previousData: RawDataRow[]) {
-  const calcMetrics = (data: RawDataRow[]) => {
-    const totalSigned = data.reduce((acc, row) => acc + (row.signed_premium_yuan || 0), 0);
-    const totalMatured = data.reduce((acc, row) => acc + (row.matured_premium_yuan || 0), 0);
-    const totalClaim = data.reduce((acc, row) => acc + (row.reported_claim_payment_yuan || 0), 0);
-    const totalExpense = data.reduce((acc, row) => acc + (row.expense_amount_yuan || 0), 0);
-    const totalMarginal = data.reduce((acc, row) => acc + (row.marginal_contribution_amount_yuan || 0), 0);
-    const totalPolicies = data.reduce((acc, row) => acc + (row.policy_count || 0), 0);
-    const totalClaims = data.reduce((acc, row) => acc + (row.claim_case_count || 0), 0);
+// 移到组件外部以避免重复创建
+const calcMetrics = (data: RawDataRow[]) => {
+  const totalSigned = data.reduce((acc, row) => acc + (row.signed_premium_yuan || 0), 0);
+  const totalMatured = data.reduce((acc, row) => acc + (row.matured_premium_yuan || 0), 0);
+  const totalClaim = data.reduce((acc, row) => acc + (row.reported_claim_payment_yuan || 0), 0);
+  const totalExpense = data.reduce((acc, row) => acc + (row.expense_amount_yuan || 0), 0);
+  const totalMarginal = data.reduce((acc, row) => acc + (row.marginal_contribution_amount_yuan || 0), 0);
+  const totalPolicies = data.reduce((acc, row) => acc + (row.policy_count || 0), 0);
+  const totalClaims = data.reduce((acc, row) => acc + (row.claim_case_count || 0), 0);
 
-    return {
-      totalSigned,
-      totalMatured,
-      totalClaim,
-      totalExpense,
-      totalMarginal,
-      totalPolicies,
-      totalClaims,
-      avgPremium: totalPolicies > 0 ? totalSigned / totalPolicies : 0,
-      avgClaim: totalClaims > 0 ? totalClaim / totalClaims : 0,
-      avgExpense: totalPolicies > 0 ? totalExpense / totalPolicies : 0,
-      incidentRate: totalPolicies > 0 ? (totalClaims / totalPolicies) * 100 : 0,
-      lossRatio: totalMatured > 0 ? (totalClaim / totalMatured) * 100 : 0,
-      expenseRatio: totalSigned > 0 ? (totalExpense / totalSigned) * 100 : 0,
-      marginalRate: totalMatured > 0 ? (totalMarginal / totalMatured) * 100 : 0,
-      variableCostRatio: 0,
-      ultimateMarginalContribution: 0,
-    };
+  return {
+    totalSigned,
+    totalMatured,
+    totalClaim,
+    totalExpense,
+    totalMarginal,
+    totalPolicies,
+    totalClaims,
+    avgPremium: totalPolicies > 0 ? totalSigned / totalPolicies : 0,
+    avgClaim: totalClaims > 0 ? totalClaim / totalClaims : 0,
+    avgExpense: totalPolicies > 0 ? totalExpense / totalPolicies : 0,
+    incidentRate: totalPolicies > 0 ? (totalClaims / totalPolicies) * 100 : 0,
+    lossRatio: totalMatured > 0 ? (totalClaim / totalMatured) * 100 : 0,
+    expenseRatio: totalSigned > 0 ? (totalExpense / totalSigned) * 100 : 0,
+    marginalRate: totalMatured > 0 ? (totalMarginal / totalMatured) * 100 : 0,
+    variableCostRatio: 0,
+    ultimateMarginalContribution: 0,
   };
+};
+
+function calculateSecondaryMetrics(currentData: RawDataRow[], previousData: RawDataRow[]) {
 
   const current = calcMetrics(currentData);
   const previous = previousData.length > 0 ? calcMetrics(previousData) : null;
@@ -183,7 +185,7 @@ function calculateSecondaryMetrics(currentData: RawDataRow[], previousData: RawD
   };
 }
 
-export function KpiGrid() {
+function KpiGridComponent() {
   const { filteredData, rawData, highlightedKpis, filters } = useData();
   const { toast } = useToast();
   const [dimension, setDimension] = useState<DimensionKey>(DEFAULT_DIMENSION);
@@ -432,11 +434,11 @@ export function KpiGrid() {
     }
   }, [hasAIData]);
 
-  const toggleViewMode = () => {
+  const toggleViewMode = useCallback(() => {
     setViewMode((prev) => (prev === 'card' ? 'table' : 'card'));
-  };
+  }, []);
 
-  const handleCopyTable = async () => {
+  const handleCopyTable = useCallback(async () => {
     if (!canCopyTable) {
       return;
     }
@@ -454,14 +456,16 @@ export function KpiGrid() {
         description: '指标数据已复制到剪贴板，可直接粘贴到表格工具中。',
       });
     } catch (error) {
-      console.error('复制表格失败', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('复制表格失败', error);
+      }
       toast({
         variant: 'destructive',
         title: '复制失败',
         description: '浏览器未授权剪贴板权限，请手动复制。',
       });
     }
-  };
+  }, [canCopyTable, tableRows, toast]);
 
   return (
     <div className="space-y-4">
@@ -668,3 +672,6 @@ export function KpiGrid() {
     </div>
   );
 }
+
+// 使用 memo 优化性能，避免不必要的重渲染
+export const KpiGrid = memo(KpiGridComponent);

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useData } from '@/contexts/data-context';
+import { useData, useFilters } from '@/contexts/app-providers';
 import { Filters, RawDataRow } from '@/lib/types';
 import { format } from 'date-fns';
 import { customerCategoryCombinations } from '@/lib/data';
@@ -91,7 +91,8 @@ function generateSummaryText(filters: Filters, allCustomerCategories: string[]):
 }
 
 export function FilterSummary() {
-  const { rawData, filteredData, filters } = useData();
+  const { rawData } = useData();
+  const { filteredData, filters } = useFilters();
   const [displayDate, setDisplayDate] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export function FilterSummary() {
 }
 
 export function FilterSummaryTitle() {
-  const { filters, filterOptions } = useData();
+  const { filters, filterOptions } = useFilters();
   const [summary, setSummary] = useState("数据概况");
   
   useEffect(() => {

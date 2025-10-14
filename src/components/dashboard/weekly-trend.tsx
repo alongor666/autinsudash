@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback, memo } from "react";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -336,7 +336,7 @@ function formatUnit(value: number, unit: string, formatter: (value: number) => s
   return `${content}${unit}`;
 }
 
-export function WeeklyTrendChart() {
+function WeeklyTrendChartComponent() {
   const { trendFilteredData, rawData } = useData();
   const { toast } = useToast();
 
@@ -591,11 +591,11 @@ export function WeeklyTrendChart() {
   const isTableMode = viewMode === 'table';
   const canCopyTable = tableRows.length > 0;
 
-  const toggleViewMode = () => {
+  const toggleViewMode = useCallback(() => {
     setViewMode((prev) => (prev === 'chart' ? 'table' : 'chart'));
-  };
+  }, []);
 
-  const handleCopyTable = async () => {
+  const handleCopyTable = useCallback(async () => {
     if (!isTableMode || !canCopyTable) {
       return;
     }
@@ -613,16 +613,20 @@ export function WeeklyTrendChart() {
         description: '趋势数据已复制到剪贴板，可直接粘贴到表格工具中。',
       });
     } catch (error) {
-      console.error('复制表格失败', error);
+      if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('复制表格失败', error);
+        }
+      }
       toast({
         variant: 'destructive',
         title: '复制失败',
         description: '浏览器未授权剪贴板权限，请手动复制。',
       });
     }
-  };
+  }, [isTableMode, canCopyTable, barMetric.label, lineMetric.label, tableRows, toast]);
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = useCallback(async () => {
     if (!chartData.length) {
       return;
     }
@@ -682,7 +686,11 @@ export function WeeklyTrendChart() {
         return newCache;
       });
     } catch (error) {
-      console.error('AI分析失败:', error);
+      if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('AI分析失败:', error);
+        }
+      }
       toast({
         variant: 'destructive',
         title: 'AI 分析失败',
@@ -691,7 +699,21 @@ export function WeeklyTrendChart() {
     } finally {
       setIsAnalyzing(false);
     }
-  };
+  }, [
+    analysisCacheKey,
+    analysisCache,
+    dimension,
+    dimensionValueOptions,
+    dimensionValue,
+    barMetric.key,
+    barMetric.label,
+    barMetric.unit,
+    lineMetric.key,
+    lineMetric.label,
+    lineMetric.unit,
+    chartData,
+    toast
+  ]);
 
   return (
     <Card>
@@ -911,3 +933,5 @@ export function WeeklyTrendChart() {
     </Card>
   );
 }
+
+export const WeeklyTrendChart = memo(WeeklyTrendChartComponent);

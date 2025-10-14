@@ -82,10 +82,12 @@ export function parseCSV(file: File): Promise<RawDataRow[]> {
         !header.every((h, i) => h.toLowerCase() === CSV_HEADERS[i].toLowerCase());
       
       if (headerMismatch) {
-         console.warn("CSV header mismatch:");
-         console.warn("实际文件头:", header);
-         console.warn("预期文件头:", CSV_HEADERS);
-         console.warn("文件头长度:", header.length, "vs", CSV_HEADERS.length);
+         if (process.env.NODE_ENV === 'development') {
+           console.warn("CSV header mismatch:");
+           console.warn("实际文件头:", header);
+           console.warn("预期文件头:", CSV_HEADERS);
+           console.warn("文件头长度:", header.length, "vs", CSV_HEADERS.length);
+         }
          
          // 提供更详细的错误信息
          const missingHeaders = CSV_HEADERS.filter(expected => 
@@ -120,7 +122,9 @@ export function parseCSV(file: File): Promise<RawDataRow[]> {
                 value = parseRobustFloat(value as string);
                 if (value === null && key !== 'large_truck_score' && key !== 'small_truck_score') {
                     // Log a warning for unexpected nulls in critical numeric fields.
-                    console.warn(`Invalid or empty numeric value at row ${i+1}, column ${key}. Skipping row.`);
+                    if (process.env.NODE_ENV === 'development') {
+                      console.warn(`Invalid or empty numeric value at row ${i+1}, column ${key}. Skipping row.`);
+                    }
                     skipRow = true;
                     break;
                 }
