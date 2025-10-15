@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, Copy, Sparkles } from "lucide-react";
+import { ArrowUpDown, Copy } from "lucide-react";
 import {
   CONTROL_BUTTON_CLASS,
   CONTROL_FIELD_CLASS,
@@ -32,7 +32,6 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getMarginalContributionColor } from "@/lib/color-scale";
 import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
-import { AIAnalysisDisplay } from './ai-analysis-display';
 import type { RawDataRow } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -421,8 +420,6 @@ export function ComparisonAnalysisChart() {
   const [dimension, setDimension] = useState<DimensionKey>("customer_category_3");
   const [metricKey, setMetricKey] = useState<MetricKey>("signedPremium");
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [analysisCache, setAnalysisCache] = useState<Map<string, { analysis: string; prompt?: string; metadata?: Record<string, unknown> }>>(new Map());
-  const [analyzingChart, setAnalyzingChart] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
 
   const metric = metricDefinitions.find((item) => item.key === metricKey) ?? metricDefinitions[0];
@@ -497,16 +494,6 @@ export function ComparisonAnalysisChart() {
       }),
     );
   }, [filteredData, dimension, metricKey, sortOrder]);
-
-  // 生成缓存键（在 barData 之后）
-  const analysisCacheKey = useMemo(() => {
-    return `comparison_${dimension}_${metricKey}_${sortOrder}_${barData.length}`;
-  }, [dimension, metricKey, sortOrder, barData.length]);
-
-  // 从缓存中获取分析结果
-  const barAnalysis = useMemo(() => {
-    return analysisCache.get(analysisCacheKey) || '';
-  }, [analysisCache, analysisCacheKey]);
 
   const yAxisWidth = useMemo(() => {
     if (!barData.length) {
@@ -627,55 +614,6 @@ export function ComparisonAnalysisChart() {
   const barTitle = `各${dimensionLabel}${barMetricShortLabel}对比图`;
   const barExplanation = `${metric.description}。`;
 
-  // AI分析函数
-  const analyzeChart = async () => {
-    // 检查缓存
-    if (analysisCache.has(analysisCacheKey)) {
-      return; // 已有缓存，无需重新分析
-    }
-
-    setAnalyzingChart(true);
-
-    try {
-      const requestData = {
-        chartType: 'bar',
-        data: barData,
-        dimension: dimensionLabel,
-        metrics: {
-          metric: barMetricShortLabel,
-        },
-      };
-
-      const response = await fetch('/api/analyze-chart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData),
-      });
-
-      if (!response.ok) {
-        throw new Error('分析失败');
-      }
-
-      const { analysis, prompt, metadata } = await response.json();
-
-      // 保存到缓存
-      setAnalysisCache((prev) => {
-        const newCache = new Map(prev);
-        newCache.set(analysisCacheKey, { analysis, prompt, metadata });
-        return newCache;
-      });
-    } catch (error) {
-      console.error('AI分析失败:', error);
-      toast({
-        variant: 'destructive',
-        title: 'AI 分析失败',
-        description: '请稍后重试或检查网络连接。',
-      });
-    } finally {
-      setAnalyzingChart(false);
-    }
-  };
-
   return (
     <Card className="h-full">
       <CardHeader>
@@ -685,7 +623,7 @@ export function ComparisonAnalysisChart() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className={`${CONTROL_WRAPPER_CLASS} lg:grid-cols-[1.05fr_1.05fr_0.9fr_0.9fr_0.9fr]`}>
+        <div className={`${CONTROL_WRAPPER_CLASS} lg:grid-cols-[1.05fr_1.05fr_0.9fr_0.9fr]`}>
           <div className={CONTROL_FIELD_CLASS}>
             <span className="text-xs text-muted-foreground">选择维度</span>
             <Select value={dimension} onValueChange={(value) => setDimension(value as DimensionKey)}>
@@ -747,28 +685,7 @@ export function ComparisonAnalysisChart() {
               {isTableMode ? '查看图表' : '查看数据'}
             </Button>
           </div>
-          <div className={CONTROL_FIELD_CLASS}>
-            <span className="text-xs text-muted-foreground">AI 分析</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className={`${CONTROL_BUTTON_CLASS} w-full justify-center gap-2`}
-              onClick={analyzeChart}
-              disabled={analyzingChart || !barData.length}
-            >
-              <Sparkles className="h-4 w-4" />
-              {analyzingChart ? '分析中...' : barAnalysis ? '重新分析' : 'AI分析'}
-            </Button>
-          </div>
         </div>
-
-        {barAnalysis && (
-          <AIAnalysisDisplay
-            analysis={barAnalysis.analysis}
-            prompt={barAnalysis.prompt}
-            metadata={barAnalysis.metadata}
-          />
-        )}
 
         {isTableMode ? (
           tableRows.length === 0 ? (
@@ -879,3 +796,15 @@ export function ComparisonAnalysisChart() {
     </Card>
   );
 }
+
+/**
+ * 处理AI分析按钮点击事件
+ * 注意：静态部署模式下，AI分析功能已禁用
+ */
+const handleAnalyzeChart = async () => {
+  toast({
+    variant: 'default',
+    title: 'AI 分析功能暂不可用',
+    description: '当前为静态部署模式，AI分析功能已禁用。',
+  });
+};

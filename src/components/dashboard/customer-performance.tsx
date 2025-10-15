@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, Copy, Sparkles } from "lucide-react";
+import { ArrowUpDown, Copy } from "lucide-react";
 import {
   Cell,
   Pie,
@@ -28,7 +28,6 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getExpenseContributionColor, getMarginalContributionColor } from "@/lib/color-scale";
 import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
-import { AIAnalysisDisplay } from './ai-analysis-display';
 import type { RawDataRow } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -623,8 +622,6 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
   const [expenseSortOrder, setExpenseSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // AI分析缓存状态
-  const [analysisCache, setAnalysisCache] = useState<Map<string, { analysis: string; prompt?: string; metadata?: Record<string, unknown> }>>(new Map());
-  const [analyzingChart, setAnalyzingChart] = useState<string | null>(null);
 
   const datasetForOptions = useMemo(() => (filteredData.length ? filteredData : rawData), [filteredData, rawData]);
 
@@ -825,24 +822,6 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
       }),
     );
   }, [filteredData, expenseDimension, expenseSortOrder, showExpense]);
-
-  // 生成缓存键（在 sunburstData 和 expenseData 之后）
-  const sunburstCacheKey = useMemo(() => {
-    return `sunburst_${sunburstDimension}_${innerMetricKey}_${outerMetricKey}_${sunburstData.length}`;
-  }, [sunburstDimension, innerMetricKey, outerMetricKey, sunburstData.length]);
-
-  const expenseCacheKey = useMemo(() => {
-    return `expense_${expenseDimension}_${expenseSortOrder}_${expenseData.length}`;
-  }, [expenseDimension, expenseSortOrder, expenseData.length]);
-
-  // 从缓存中获取分析结果
-  const sunburstAnalysis = useMemo(() => {
-    return analysisCache.get(sunburstCacheKey) || '';
-  }, [analysisCache, sunburstCacheKey]);
-
-  const expenseAnalysis = useMemo(() => {
-    return analysisCache.get(expenseCacheKey) || '';
-  }, [analysisCache, expenseCacheKey]);
 
   const expenseChartHeight = useMemo(() => {
     if (!expenseData.length) {
@@ -1140,68 +1119,6 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
   const expenseTitle = `各${expenseDimensionLabel}费用结余对比图`;
   const expenseExplanation = '基准费用率为 14%。高于基准表示费用消耗，低于基准表示费用结余。费用结余 = 签单保费 × (基准费用率 - 实际费用率)。';
 
-  // AI分析函数
-  const analyzeChart = async (chartType: 'sunburst' | 'expense') => {
-    const cacheKey = chartType === 'sunburst' ? sunburstCacheKey : expenseCacheKey;
-
-    // 检查缓存
-    if (analysisCache.has(cacheKey)) {
-      return; // 已有缓存，无需重新分析
-    }
-
-    setAnalyzingChart(chartType);
-
-    try {
-      let requestData: Record<string, unknown> = {};
-
-      if (chartType === 'sunburst') {
-        requestData = {
-          chartType,
-          data: sunburstData,
-          dimension: sunburstDimensionLabel,
-          metrics: {
-            inner: innerMetricMeta.shortLabel,
-            outer: outerMetricMeta.shortLabel,
-          },
-        };
-      } else if (chartType === 'expense') {
-        requestData = {
-          chartType,
-          data: expenseData,
-          dimension: expenseDimensionLabel,
-        };
-      }
-
-      const response = await fetch('/api/analyze-chart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData),
-      });
-
-      if (!response.ok) {
-        throw new Error('分析失败');
-      }
-
-      const { analysis, prompt, metadata } = await response.json();
-
-      // 保存到缓存
-      setAnalysisCache((prev) => {
-        const newCache = new Map(prev);
-        newCache.set(cacheKey, { analysis, prompt, metadata });
-        return newCache;
-      });
-    } catch (error) {
-      console.error('AI分析失败:', error);
-      toast({
-        variant: 'destructive',
-        title: 'AI 分析失败',
-        description: '请稍后重试或检查网络连接。',
-      });
-    } finally {
-      setAnalyzingChart(null);
-    }
-  };
-
   return (
     <div className="grid gap-4">
       {showStructure && (
@@ -1214,7 +1131,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className={`${CONTROL_WRAPPER_CLASS} lg:grid-cols-[1.05fr_1.05fr_1.05fr_0.9fr_0.9fr]`}>
+              <div className={`${CONTROL_WRAPPER_CLASS} lg:grid-cols-[1.05fr_1.05fr_1.05fr_0.9fr]`}>
                 <div className={CONTROL_FIELD_CLASS}>
                   <span className="text-xs text-muted-foreground">选择维度</span>
                   <Select value={sunburstDimension} onValueChange={(value) => setSunburstDimension(value as DimensionKey)}>
@@ -1278,28 +1195,8 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
                     {isSunburstTable ? '查看图表' : '查看数据'}
                   </Button>
                 </div>
-                <div className={CONTROL_FIELD_CLASS}>
-                  <span className="text-xs text-muted-foreground">AI 分析</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className={`${CONTROL_BUTTON_CLASS} w-full justify-center gap-2`}
-                    onClick={() => analyzeChart('sunburst')}
-                    disabled={analyzingChart !== null || sunburstData.length === 0}
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    {analyzingChart === 'sunburst' ? '分析中...' : sunburstAnalysis ? '重新分析' : 'AI分析'}
-                  </Button>
-                </div>
               </div>
 
-          {sunburstAnalysis && (
-            <AIAnalysisDisplay
-              analysis={sunburstAnalysis.analysis}
-              prompt={sunburstAnalysis.prompt}
-              metadata={sunburstAnalysis.metadata}
-            />
-          )}
         </CardContent>
       </Card>
 
@@ -1536,7 +1433,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className={`${CONTROL_WRAPPER_CLASS} lg:grid-cols-[1.05fr_0.9fr_0.9fr_0.9fr]`}>
+        <div className={`${CONTROL_WRAPPER_CLASS} lg:grid-cols-[1.05fr_0.9fr_0.9fr]`}>
           <div className={CONTROL_FIELD_CLASS}>
             <span className="text-xs text-muted-foreground">选择维度</span>
             <Select value={expenseDimension} onValueChange={(value) => setExpenseDimension(value as ExpenseDimensionKey)}>
@@ -1583,28 +1480,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
               {isExpenseTable ? '查看图表' : '查看数据'}
             </Button>
           </div>
-          <div className={CONTROL_FIELD_CLASS}>
-            <span className="text-xs text-muted-foreground">AI 分析</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className={`${CONTROL_BUTTON_CLASS} w-full justify-center gap-2`}
-              onClick={() => analyzeChart('expense')}
-              disabled={analyzingChart !== null || expenseData.length === 0}
-            >
-              <Sparkles className="h-4 w-4" />
-              {analyzingChart === 'expense' ? '分析中...' : expenseAnalysis ? '重新分析' : 'AI分析'}
-            </Button>
-          </div>
         </div>
-
-        {expenseAnalysis && (
-          <AIAnalysisDisplay
-            analysis={expenseAnalysis.analysis}
-            prompt={expenseAnalysis.prompt}
-            metadata={expenseAnalysis.metadata}
-          />
-        )}
 
         {isExpenseTable ? (
           expenseTableRows.length === 0 ? (

@@ -46,9 +46,8 @@ import {
   dimensionGroups,
 } from "@/components/dashboard/customer-performance";
 import { getMarginalContributionColor } from "@/lib/color-scale";
-import { AIAnalysisDisplay } from './ai-analysis-display';
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Sparkles } from "lucide-react";
+import { Copy } from "lucide-react";
 import {
   CONTROL_BUTTON_CLASS,
   CONTROL_FIELD_CLASS,
@@ -345,8 +344,6 @@ export function WeeklyTrendChart() {
   const [barMetricKey, setBarMetricKey] = useState<AbsoluteMetricKey>("signedPremium");
   const [lineMetricKey, setLineMetricKey] = useState<RateMetricKey>("marginalContributionRate");
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
-  const [analysisCache, setAnalysisCache] = useState<Map<string, { analysis: string; prompt?: string; metadata?: Record<string, unknown> }>>(new Map());
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const datasetForOptions = useMemo(
     () => (trendFilteredData.length ? trendFilteredData : rawData),
@@ -516,16 +513,6 @@ export function WeeklyTrendChart() {
     return (value: number) => value.toFixed(lineMetric.unit === "%" ? 1 : 3);
   }, [lineMetric]);
 
-  // 生成缓存键（在 chartData 之后）
-  const analysisCacheKey = useMemo(() => {
-    return `trend_${dimension}_${dimensionValue}_${barMetricKey}_${lineMetricKey}_${chartData.length}`;
-  }, [dimension, dimensionValue, barMetricKey, lineMetricKey, chartData.length]);
-
-  // 从缓存中获取分析结果
-  const analysis = useMemo(() => {
-    return analysisCache.get(analysisCacheKey) || null;
-  }, [analysisCache, analysisCacheKey]);
-
   const insight = useMemo(() => {
     if (!chartData.length) {
       return "暂无可用数据";
@@ -622,77 +609,6 @@ export function WeeklyTrendChart() {
     }
   };
 
-  const handleAnalyze = async () => {
-    if (!chartData.length) {
-      return;
-    }
-
-    // 检查缓存
-    if (analysisCache.has(analysisCacheKey)) {
-      return; // 已有缓存，无需重新分析
-    }
-
-    setIsAnalyzing(true);
-
-    try {
-      const dimensionLabel =
-        dimensionConfigs.find((option) => option.value === dimension)?.label ?? '维度';
-      const dimensionValueLabel =
-        dimensionValueOptions.find((option) => option.value === dimensionValue)?.label ?? '全部';
-      const barPrecision = 0;
-      const linePrecision = lineMetric.unit === '%' ? 2 : 3;
-
-      const requestData = {
-        chartType: 'trend',
-        dimension,
-        dimensionLabel,
-        dimensionValue,
-        dimensionValueLabel,
-        barMetric: {
-          key: barMetric.key,
-          label: barMetric.label,
-          unit: barMetric.unit,
-          precision: barPrecision,
-        },
-        lineMetric: {
-          key: lineMetric.key,
-          label: lineMetric.label,
-          unit: lineMetric.unit,
-          precision: linePrecision,
-        },
-        data: chartData,
-      };
-
-      const response = await fetch('/api/analyze-chart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData),
-      });
-
-      if (!response.ok) {
-        throw new Error('分析失败');
-      }
-
-      const { analysis, prompt, metadata } = await response.json();
-
-      // 保存到缓存
-      setAnalysisCache((prev) => {
-        const newCache = new Map(prev);
-        newCache.set(analysisCacheKey, { analysis, prompt, metadata });
-        return newCache;
-      });
-    } catch (error) {
-      console.error('AI分析失败:', error);
-      toast({
-        variant: 'destructive',
-        title: 'AI 分析失败',
-        description: '请稍后重试或检查网络连接。',
-      });
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -700,7 +616,7 @@ export function WeeklyTrendChart() {
         <CardDescription>{insight}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className={`${CONTROL_WRAPPER_CLASS} lg:grid-cols-[1.05fr_1.05fr_1.05fr_1.05fr_0.9fr_0.9fr]`}>
+        <div className={`${CONTROL_WRAPPER_CLASS} lg:grid-cols-[1.05fr_1.05fr_1.05fr_1.05fr_0.9fr]`}>
           <div className={CONTROL_FIELD_CLASS}>
             <span className="text-xs text-muted-foreground">选择维度</span>
             <Select value={dimension} onValueChange={(value) => setDimension(value as DimensionKey)}>
@@ -779,28 +695,7 @@ export function WeeklyTrendChart() {
               {isTableMode ? '查看图表' : '查看数据'}
             </Button>
           </div>
-          <div className={CONTROL_FIELD_CLASS}>
-            <span className="text-xs text-muted-foreground">AI 分析</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className={`${CONTROL_BUTTON_CLASS} w-full justify-center gap-2`}
-              onClick={handleAnalyze}
-              disabled={isAnalyzing || !chartData.length}
-            >
-              <Sparkles className="h-4 w-4" />
-              {isAnalyzing ? '分析中...' : analysis ? '重新分析' : 'AI分析'}
-            </Button>
-          </div>
         </div>
-
-        {analysis && (
-          <AIAnalysisDisplay
-            analysis={analysis.analysis}
-            prompt={analysis.prompt}
-            metadata={analysis.metadata}
-          />
-        )}
 
         {isTableMode ? (
           tableRows.length === 0 ? (

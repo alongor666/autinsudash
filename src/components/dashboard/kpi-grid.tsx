@@ -6,7 +6,6 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useMemo, useState, useEffect } from 'react';
-import { AIDeteriorationAnalysis } from './ai-deterioration-analysis';
 import {
   Select,
   SelectContent,
@@ -35,6 +34,7 @@ import {
   CONTROL_TRIGGER_CLASS,
   CONTROL_WRAPPER_CLASS,
 } from './control-styles';
+import { AIDeteriorationAnalysis } from './ai-deterioration-analysis';
 
 const DEFAULT_DIMENSION: DimensionKey = "customer_category_3";
 
@@ -189,7 +189,7 @@ export function KpiGrid() {
   const [dimension, setDimension] = useState<DimensionKey>(DEFAULT_DIMENSION);
   const [dimensionValue, setDimensionValue] = useState<string>("ALL");
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
-  const [showAIAnalysis, setShowAIAnalysis] = useState(false);
+  const [showAIAnalysis, setShowAIAnalysis] = useState<boolean>(false);
 
   const datasetForOptions = useMemo(() => (filteredData.length ? filteredData : rawData), [filteredData, rawData]);
 
@@ -296,6 +296,11 @@ export function KpiGrid() {
       return calculateKPIs([], []);
     }
     return calculateKPIs(currentWeekData, previousWeekData);
+  }, [currentWeekData, previousWeekData]);
+
+  // 判断是否有足够的数据进行AI分析
+  const hasAIData = useMemo(() => {
+    return currentWeekData.length > 0 && previousWeekData.length > 0;
   }, [currentWeekData, previousWeekData]);
 
   const secondaryMetrics = useMemo(() => {
@@ -424,13 +429,6 @@ export function KpiGrid() {
 
   const isTableMode = viewMode === 'table';
   const canCopyTable = tableRows.length > 0;
-  const hasAIData = currentWeekData.length > 0 || previousWeekData.length > 0;
-
-  useEffect(() => {
-    if (!hasAIData) {
-      setShowAIAnalysis(false);
-    }
-  }, [hasAIData]);
 
   const toggleViewMode = () => {
     setViewMode((prev) => (prev === 'card' ? 'table' : 'card'));
