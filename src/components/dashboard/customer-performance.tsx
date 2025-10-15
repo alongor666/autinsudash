@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, Copy, Sparkles } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Copy, Sparkles } from "lucide-react";
 import {
   Cell,
   Pie,
@@ -27,10 +27,18 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getExpenseContributionColor, getMarginalContributionColor } from "@/lib/color-scale";
-import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
+import { normalizeEnergyType, normalizeTransferStatus, buildWeeklyDeltaSlice } from "@/lib/utils";
 import { AIAnalysisDisplay } from './ai-analysis-display';
-import type { RawDataRow } from "@/lib/types";
+import type { RawDataRow, Filters } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { customerCategoryCombinations } from "@/lib/data";
+import { 
+  classifyTruck, 
+  isSmallTruck, 
+  isLargeTruck, 
+  getTruckTypeLabel,
+  TruckType 
+} from "@/lib/truck-classification";
 import {
   CONTROL_BUTTON_CLASS,
   CONTROL_FIELD_CLASS,
@@ -502,6 +510,43 @@ export function getDimensionValue(row: RawDataRow, key: DimensionKey) {
   return stringValue;
 }
 
+/**
+ * 获取优化后的货车评分维度值
+ * 基于业务类型和客户类型智能分类小货车和大货车
+ */
+export function getOptimizedTruckScore(row: RawDataRow, key: DimensionKey): string {
+  if (key !== "large_truck_score" && key !== "small_truck_score") {
+    return getDimensionValue(row, key);
+  }
+
+  // 获取原始评分值
+  const rawScore = getRawDimensionValue(row, key);
+  
+  // 如果有原始评分，直接使用
+  if (rawScore !== null && rawScore !== undefined) {
+    return typeof rawScore === "number" ? rawScore.toString() : String(rawScore);
+  }
+
+  // 基于业务类型和客户类型进行智能分类
+  const truckType = classifyTruck(row);
+  
+  if (key === "small_truck_score") {
+    if (truckType === TruckType.SMALL_TRUCK) {
+      return "智能识别-小货车";
+    } else if (truckType === TruckType.LARGE_TRUCK) {
+      return "不适用";
+    }
+  } else if (key === "large_truck_score") {
+    if (truckType === TruckType.LARGE_TRUCK) {
+      return "智能识别-大货车";
+    } else if (truckType === TruckType.SMALL_TRUCK) {
+      return "不适用";
+    }
+  }
+
+  return "未评分";
+}
+
 export function hasDimensionData(rows: RawDataRow[], key: DimensionKey) {
   const keyExists = rows.some((row) => Object.prototype.hasOwnProperty.call(row, key));
   if (!keyExists) {
@@ -607,8 +652,74 @@ type ExpenseTooltipPayload = {
 
 type AnalysisSection = 'structure' | 'expense' | 'all';
 
+// 排序配置类型
+type SortConfig = {
+  key: string;
+  direction: 'asc' | 'desc';
+} | null;
+
+/**
+ * 生成筛选条件的简短摘要文本
+ * 用于在图表标题中显示当前的筛选状态
+ */
+function generateFilterSummary(filters: Filters, filterOptions: { customerCategories: string[] }): string {
+  const parts: string[] = [];
+
+  // 客户类别
+  if (filters.customerCategories && filters.customerCategories.length > 0 &&
+      filters.customerCategories.length < filterOptions.customerCategories.length) {
+    // 尝试匹配组合名称
+    const selectedSet = new Set(filters.customerCategories);
+    let matched = false;
+    for (const combination of customerCategoryCombinations) {
+      if (combination.matchFunction(selectedSet, filterOptions.customerCategories)) {
+        parts.push(combination.name);
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      if (filters.customerCategories.length === 1) {
+        parts.push(filters.customerCategories[0]);
+      } else if (filters.customerCategories.length <= 3) {
+        parts.push(filters.customerCategories.join('、'));
+      } else {
+        parts.push(`${filters.customerCategories.length}类客户`);
+      }
+    }
+  }
+
+  // 能源类型
+  if (filters.energyTypes && filters.energyTypes.length === 1) {
+    parts.push(filters.energyTypes[0]);
+  }
+
+  // 过户状态
+  if (filters.transferredStatus && filters.transferredStatus.length === 1) {
+    parts.push(filters.transferredStatus[0]);
+  }
+
+  // 新转续状态
+  if (filters.renewalStatuses && filters.renewalStatuses.length === 1) {
+    parts.push(filters.renewalStatuses[0]);
+  }
+
+  // 三级机构
+  if (filters.region && filters.region.length > 0) {
+    if (filters.region.length === 1) {
+      parts.push(filters.region[0]);
+    } else if (filters.region.length <= 3) {
+      parts.push(filters.region.join('、'));
+    } else {
+      parts.push(`${filters.region.length}个机构`);
+    }
+  }
+
+  return parts.length > 0 ? parts.join(' · ') : '';
+}
+
 export function CustomerPerformanceCharts({ section = 'all' }: { section?: AnalysisSection }) {
-  const { filteredData, rawData } = useData();
+  const { filteredData, trendFilteredData, matchedData, rawData, timePeriod, filters, filterOptions } = useData();
   const { toast } = useToast();
   const showStructure = section === 'structure' || section === 'all';
   const showExpense = section === 'expense' || section === 'all';
@@ -622,19 +733,47 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
   // 排序状态：'desc' 降序（默认），'asc' 升序
   const [expenseSortOrder, setExpenseSortOrder] = useState<'asc' | 'desc'>('desc');
 
+  // 表格排序状态
+  const [sunburstSortConfig, setSunburstSortConfig] = useState<SortConfig>(null);
+  const [expenseTableSortConfig, setExpenseTableSortConfig] = useState<SortConfig>(null);
+
   // AI分析缓存状态
   const [analysisCache, setAnalysisCache] = useState<Map<string, { analysis: string; prompt?: string; metadata?: Record<string, unknown> }>>(new Map());
   const [analyzingChart, setAnalyzingChart] = useState<string | null>(null);
 
-  const datasetForOptions = useMemo(() => (filteredData.length ? filteredData : rawData), [filteredData, rawData]);
+  // 使用 trendFilteredData 作为周期相关的数据源，以便年累计聚合与当周增量均能正确响应
+  const datasetForOptions = useMemo(
+    () => (trendFilteredData.length ? trendFilteredData : rawData),
+    [trendFilteredData, rawData]
+  );
+
+  // 根据timePeriod动态选择有效数据源
+  const weeklyBaseRows = useMemo(
+    () => (matchedData.length ? matchedData : datasetForOptions),
+    [matchedData, datasetForOptions]
+  );
+
+  const weeklySlice = useMemo(() => {
+    if (timePeriod !== 'weekly') {
+      return null;
+    }
+    return buildWeeklyDeltaSlice(weeklyBaseRows, filters.weekNumber ?? undefined);
+  }, [timePeriod, weeklyBaseRows, filters.weekNumber]);
+
+  const effectiveData = useMemo(() => {
+    if (timePeriod === 'ytd') {
+      return datasetForOptions;
+    }
+    return weeklySlice?.deltaRows ?? [];
+  }, [timePeriod, datasetForOptions, weeklySlice]);
 
   const availableExpenseOptions = useMemo(() => {
-    if (!datasetForOptions.length) {
+    if (!effectiveData.length) {
       return expenseDimensionOptions;
     }
-    const options = expenseDimensionOptions.filter((option) => hasDimensionData(datasetForOptions, option.value));
+    const options = expenseDimensionOptions.filter((option) => hasDimensionData(effectiveData, option.value));
     return options.length ? options : expenseDimensionOptions;
-  }, [datasetForOptions]);
+  }, [effectiveData]);
 
   const groupedExpenseOptions = useMemo(() => {
     const availableSet = new Set(availableExpenseOptions.map((option) => option.value));
@@ -649,6 +788,21 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
       }))
       .filter((group) => group.options.length > 0);
   }, [availableExpenseOptions]);
+
+  // 排序处理函数
+  const handleSunburstSort = (key: string) => {
+    setSunburstSortConfig(prev => ({
+      key,
+      direction: prev?.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const handleExpenseTableSort = (key: string) => {
+    setExpenseTableSortConfig(prev => ({
+      key,
+      direction: prev?.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
 
   useEffect(() => {
     if (availableExpenseOptions.length === 0) {
@@ -679,7 +833,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
     innerTotal,
     outerTotal,
   } = useMemo(() => {
-    if (!showStructure || !filteredData.length) {
+    if (!showStructure || !effectiveData.length) {
       return {
         sunburstData: [] as SunburstDatum[],
         hasNegativeValue: false,
@@ -688,9 +842,12 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
       };
     }
 
-    const grouped = filteredData.reduce(
+    const grouped = effectiveData.reduce(
       (acc, row) => {
-        const rawDimension = getDimensionValue(row, sunburstDimension);
+        // 使用优化后的货车评分逻辑
+        const rawDimension = sunburstDimension === "large_truck_score" || sunburstDimension === "small_truck_score" 
+          ? getOptimizedTruckScore(row, sunburstDimension)
+          : getDimensionValue(row, sunburstDimension);
         const fallback = sunburstDimension === "customer_category_3" ? "未分类" : "未填写";
         const { key, label } = normalizeLabel(rawDimension, fallback);
         const current = acc.get(key);
@@ -763,17 +920,20 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
       innerTotal,
       outerTotal,
     };
-  }, [filteredData, innerMetricDefinition, outerMetricDefinition, showStructure, sunburstDimension]);
+  }, [effectiveData, innerMetricDefinition, outerMetricDefinition, showStructure, sunburstDimension]);
 
   const expenseData: ExpenseContributionDatum[] = useMemo(() => {
-    if (!showExpense || !filteredData.length) {
+    if (!showExpense || !effectiveData.length) {
       return [];
     }
 
     const baseline = 0.14;
 
-    const grouped = filteredData.reduce((acc, row) => {
-      const rawValue = getDimensionValue(row, expenseDimension);
+    const grouped = effectiveData.reduce((acc, row) => {
+      // 使用优化后的货车评分函数
+      const rawValue = (expenseDimension === 'large_truck_score' || expenseDimension === 'small_truck_score') 
+        ? getOptimizedTruckScore(row, expenseDimension)
+        : getDimensionValue(row, expenseDimension);
       const fallback = getMissingLabel(expenseDimension);
       const { key, label } = normalizeLabel(rawValue, fallback);
       if (shouldSkipMissingDimension(expenseDimension) && label === fallback) {
@@ -824,7 +984,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
         isClamped,
       }),
     );
-  }, [filteredData, expenseDimension, expenseSortOrder, showExpense]);
+  }, [effectiveData, expenseDimension, expenseSortOrder, showExpense]);
 
   // 生成缓存键（在 sunburstData 和 expenseData 之后）
   const sunburstCacheKey = useMemo(() => {
@@ -902,21 +1062,75 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
   ), [innerMetricMeta, innerTotal, outerMetricMeta, outerTotal]);
 
   const sunburstTableRows = useMemo(
-    () =>
-      sunburstData.map((item) => ({
+    () => {
+      let rows = sunburstData.map((item) => ({
         category: item.category,
         innerValue: formatSunburstValue(innerMetricMeta, item.innerValue),
         innerShare: `${(item.innerShare * 100).toFixed(2)}%`,
         outerValue: formatSunburstValue(outerMetricMeta, item.outerValue),
         outerShare: `${(item.outerShare * 100).toFixed(2)}%`,
         marginalRate: `${(item.maturedMarginalContributionRate * 100).toFixed(2)}%`,
-      })),
-    [innerMetricMeta, outerMetricMeta, sunburstData],
+        // 保留原始数值用于排序
+        _innerValue: item.innerValue,
+        _outerValue: item.outerValue,
+        _innerShare: item.innerShare,
+        _outerShare: item.outerShare,
+        _marginalRate: item.maturedMarginalContributionRate,
+      }));
+
+      // 应用排序
+      if (sunburstSortConfig) {
+        rows.sort((a, b) => {
+          let aValue: number | string;
+          let bValue: number | string;
+
+          switch (sunburstSortConfig.key) {
+            case 'category':
+              aValue = a.category;
+              bValue = b.category;
+              break;
+            case 'innerValue':
+              aValue = a._innerValue;
+              bValue = b._innerValue;
+              break;
+            case 'innerShare':
+              aValue = a._innerShare;
+              bValue = b._innerShare;
+              break;
+            case 'outerValue':
+              aValue = a._outerValue;
+              bValue = b._outerValue;
+              break;
+            case 'outerShare':
+              aValue = a._outerShare;
+              bValue = b._outerShare;
+              break;
+            case 'marginalRate':
+              aValue = a._marginalRate;
+              bValue = b._marginalRate;
+              break;
+            default:
+              return 0;
+          }
+
+          if (typeof aValue === 'string' && typeof bValue === 'string') {
+            const result = aValue.localeCompare(bValue, 'zh-CN');
+            return sunburstSortConfig.direction === 'asc' ? result : -result;
+          } else {
+            const result = (aValue as number) - (bValue as number);
+            return sunburstSortConfig.direction === 'asc' ? result : -result;
+          }
+        });
+      }
+
+      return rows;
+    },
+    [innerMetricMeta, outerMetricMeta, sunburstData, sunburstSortConfig],
   );
 
   const expenseTableRows = useMemo(
-    () =>
-      expenseData.map((item) => {
+    () => {
+      let rows = expenseData.map((item) => {
         const actualPct = (item.actualRate * 100).toFixed(2);
         const deltaPct = item.deltaRate * 100;
         const contributionWan = item.contribution / 10000;
@@ -927,9 +1141,58 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
           deltaRate: `${deltaPct >= 0 ? '+' : ''}${deltaPct.toFixed(2)}%`,
           contribution: `${Math.round(contributionWan).toLocaleString('zh-CN')}万`,
           signedPremium: `${Math.round(signedWan).toLocaleString('zh-CN')}万`,
+          // 保留原始数值用于排序
+          _actualRate: item.actualRate,
+          _deltaRate: item.deltaRate,
+          _contribution: item.contribution,
+          _signedPremium: item.signedPremium,
         };
-      }),
-    [expenseData],
+      });
+
+      // 应用排序
+      if (expenseTableSortConfig) {
+        rows.sort((a, b) => {
+          let aValue: number | string;
+          let bValue: number | string;
+
+          switch (expenseTableSortConfig.key) {
+            case 'dimension':
+              aValue = a.dimension;
+              bValue = b.dimension;
+              break;
+            case 'actualRate':
+              aValue = a._actualRate;
+              bValue = b._actualRate;
+              break;
+            case 'deltaRate':
+              aValue = a._deltaRate;
+              bValue = b._deltaRate;
+              break;
+            case 'contribution':
+              aValue = a._contribution;
+              bValue = b._contribution;
+              break;
+            case 'signedPremium':
+              aValue = a._signedPremium;
+              bValue = b._signedPremium;
+              break;
+            default:
+              return 0;
+          }
+
+          if (typeof aValue === 'string' && typeof bValue === 'string') {
+            const result = aValue.localeCompare(bValue, 'zh-CN');
+            return expenseTableSortConfig.direction === 'asc' ? result : -result;
+          } else {
+            const result = (aValue as number) - (bValue as number);
+            return expenseTableSortConfig.direction === 'asc' ? result : -result;
+          }
+        });
+      }
+
+      return rows;
+    },
+    [expenseData, expenseTableSortConfig],
   );
 
   const isSunburstTable = sunburstViewMode === 'table';
@@ -1066,9 +1329,19 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
     [expenseDimension],
   );
 
-  const sunburstTitle = hasNegativeValue
-    ? `各${sunburstDimensionLabel}${outerMetricMeta.shortLabel}条形对比图`
-    : `各${sunburstDimensionLabel}${outerMetricMeta.shortLabel}与${innerMetricMeta.shortLabel}占比图`;
+  // 生成筛选条件摘要
+  const filterSummary = useMemo(
+    () => generateFilterSummary(filters, filterOptions),
+    [filters, filterOptions],
+  );
+
+  const sunburstTitle = useMemo(() => {
+    const baseTitle = hasNegativeValue
+      ? `各${sunburstDimensionLabel}${outerMetricMeta.shortLabel}条形对比图`
+      : `各${sunburstDimensionLabel}${outerMetricMeta.shortLabel}与${innerMetricMeta.shortLabel}占比图`;
+    return filterSummary ? `${baseTitle}（${filterSummary}）` : baseTitle;
+  }, [hasNegativeValue, sunburstDimensionLabel, outerMetricMeta.shortLabel, innerMetricMeta.shortLabel, filterSummary]);
+
   const sunburstExplanation = hasNegativeValue
     ? '存在负值时以条形图形式展示，深蓝代表内环，橙色代表外环。'
     : '颜色按满期边际贡献率区间划分。';
@@ -1137,7 +1410,11 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
     return `${item.dimension}${descriptor}，吞噬${amountText}${gapText}`;
   }, [expenseData, expenseSortOrder]);
 
-  const expenseTitle = `各${expenseDimensionLabel}费用结余对比图`;
+  const expenseTitle = useMemo(() => {
+    const baseTitle = `各${expenseDimensionLabel}费用结余对比图`;
+    return filterSummary ? `${baseTitle}（${filterSummary}）` : baseTitle;
+  }, [expenseDimensionLabel, filterSummary]);
+
   const expenseExplanation = '基准费用率为 14%。高于基准表示费用消耗，低于基准表示费用结余。费用结余 = 签单保费 × (基准费用率 - 实际费用率)。';
 
   // AI分析函数
@@ -1296,8 +1573,8 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
           {sunburstAnalysis && (
             <AIAnalysisDisplay
               analysis={sunburstAnalysis.analysis}
-              prompt={sunburstAnalysis.prompt}
-              metadata={sunburstAnalysis.metadata}
+              enableSmartIndicators={true}
+              businessType="auto"
             />
           )}
         </CardContent>
@@ -1326,12 +1603,120 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[140px]">维度</TableHead>
-                  <TableHead>{innerMetricMeta.shortLabel}</TableHead>
-                  <TableHead>内环占比</TableHead>
-                  <TableHead>{outerMetricMeta.shortLabel}</TableHead>
-                  <TableHead>外环占比</TableHead>
-                  <TableHead>满期边际贡献率</TableHead>
+                  <TableHead className="w-[140px]">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 font-medium hover:bg-transparent"
+                      onClick={() => handleSunburstSort('category')}
+                    >
+                      维度
+                      {sunburstSortConfig?.key === 'category' ? (
+                        sunburstSortConfig.direction === 'asc' ? (
+                          <ArrowUp className="ml-2 h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="ml-2 h-4 w-4" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 font-medium hover:bg-transparent"
+                      onClick={() => handleSunburstSort('innerValue')}
+                    >
+                      {innerMetricMeta.shortLabel}
+                      {sunburstSortConfig?.key === 'innerValue' ? (
+                        sunburstSortConfig.direction === 'asc' ? (
+                          <ArrowUp className="ml-2 h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="ml-2 h-4 w-4" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 font-medium hover:bg-transparent"
+                      onClick={() => handleSunburstSort('innerShare')}
+                    >
+                      内环占比
+                      {sunburstSortConfig?.key === 'innerShare' ? (
+                        sunburstSortConfig.direction === 'asc' ? (
+                          <ArrowUp className="ml-2 h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="ml-2 h-4 w-4" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 font-medium hover:bg-transparent"
+                      onClick={() => handleSunburstSort('outerValue')}
+                    >
+                      {outerMetricMeta.shortLabel}
+                      {sunburstSortConfig?.key === 'outerValue' ? (
+                        sunburstSortConfig.direction === 'asc' ? (
+                          <ArrowUp className="ml-2 h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="ml-2 h-4 w-4" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 font-medium hover:bg-transparent"
+                      onClick={() => handleSunburstSort('outerShare')}
+                    >
+                      外环占比
+                      {sunburstSortConfig?.key === 'outerShare' ? (
+                        sunburstSortConfig.direction === 'asc' ? (
+                          <ArrowUp className="ml-2 h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="ml-2 h-4 w-4" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 font-medium hover:bg-transparent"
+                      onClick={() => handleSunburstSort('marginalRate')}
+                    >
+                      满期边际贡献率
+                      {sunburstSortConfig?.key === 'marginalRate' ? (
+                        sunburstSortConfig.direction === 'asc' ? (
+                          <ArrowUp className="ml-2 h-4 w-4" />
+                        ) : (
+                          <ArrowDown className="ml-2 h-4 w-4" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      )}
+                    </Button>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1436,6 +1821,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
                         y={labelY}
                         fill="hsl(var(--foreground))"
                         fontSize={12}
+                        fontWeight="bold"
                         textAnchor={isNegative ? "end" : "start"}
                         dominantBaseline="middle"
                       >
@@ -1474,6 +1860,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
                         y={labelY}
                         fill="hsl(var(--foreground))"
                         fontSize={12}
+                        fontWeight="bold"
                         textAnchor={isNegative ? "end" : "start"}
                         dominantBaseline="middle"
                       >
@@ -1601,8 +1988,8 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
         {expenseAnalysis && (
           <AIAnalysisDisplay
             analysis={expenseAnalysis.analysis}
-            prompt={expenseAnalysis.prompt}
-            metadata={expenseAnalysis.metadata}
+            enableSmartIndicators={true}
+            businessType="auto"
           />
         )}
 
@@ -1629,11 +2016,101 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[140px]">维度</TableHead>
-                    <TableHead>实际费用率</TableHead>
-                    <TableHead>与基准差异</TableHead>
-                    <TableHead>费用结余</TableHead>
-                    <TableHead>签单保费</TableHead>
+                    <TableHead className="w-[140px]">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-medium text-left justify-start"
+                        onClick={() => handleExpenseTableSort('dimension')}
+                      >
+                        维度
+                        {expenseTableSortConfig?.key === 'dimension' ? (
+                          expenseTableSortConfig.direction === 'asc' ? (
+                            <ArrowUp className="ml-1 h-3 w-3" />
+                          ) : (
+                            <ArrowDown className="ml-1 h-3 w-3" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        )}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-medium text-left justify-start"
+                        onClick={() => handleExpenseTableSort('actualRate')}
+                      >
+                        实际费用率
+                        {expenseTableSortConfig?.key === 'actualRate' ? (
+                          expenseTableSortConfig.direction === 'asc' ? (
+                            <ArrowUp className="ml-1 h-3 w-3" />
+                          ) : (
+                            <ArrowDown className="ml-1 h-3 w-3" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        )}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-medium text-left justify-start"
+                        onClick={() => handleExpenseTableSort('deltaRate')}
+                      >
+                        与基准差异
+                        {expenseTableSortConfig?.key === 'deltaRate' ? (
+                          expenseTableSortConfig.direction === 'asc' ? (
+                            <ArrowUp className="ml-1 h-3 w-3" />
+                          ) : (
+                            <ArrowDown className="ml-1 h-3 w-3" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        )}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-medium text-left justify-start"
+                        onClick={() => handleExpenseTableSort('contribution')}
+                      >
+                        费用结余
+                        {expenseTableSortConfig?.key === 'contribution' ? (
+                          expenseTableSortConfig.direction === 'asc' ? (
+                            <ArrowUp className="ml-1 h-3 w-3" />
+                          ) : (
+                            <ArrowDown className="ml-1 h-3 w-3" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        )}
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-auto p-0 font-medium text-left justify-start"
+                        onClick={() => handleExpenseTableSort('signedPremium')}
+                      >
+                        签单保费
+                        {expenseTableSortConfig?.key === 'signedPremium' ? (
+                          expenseTableSortConfig.direction === 'asc' ? (
+                            <ArrowUp className="ml-1 h-3 w-3" />
+                          ) : (
+                            <ArrowDown className="ml-1 h-3 w-3" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="ml-1 h-3 w-3" />
+                        )}
+                      </Button>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1704,6 +2181,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
                           y={labelY}
                           fill="hsl(var(--foreground))"
                           fontSize={12}
+                          fontWeight="bold"
                           textAnchor={isNegative ? 'end' : 'start'}
                           dominantBaseline="middle"
                         >
@@ -1724,7 +2202,7 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
         <p className="text-sm text-muted-foreground/70">{expenseExplanation}</p>
       </CardContent>
     </Card>
-      )}
+    )}
     </div>
   );
 }
