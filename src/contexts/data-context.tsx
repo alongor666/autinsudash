@@ -29,6 +29,53 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+// 生成示例数据的函数
+function generateSampleData(): RawDataRow[] {
+  const sampleData: RawDataRow[] = [];
+  const regions = ['天府', '高新', '青羊', '宜宾', '德阳'];
+  const customerCategories = ['非营业个人客车', '非营业企业客车', '营业货车'];
+  const insuranceTypes = ['交强险', '商业保险'];
+  const energyTypes = ['新能源', '燃油'];
+  const coverageTypes = ['交三', '主全', '单交'];
+  
+  // 生成28-41周的数据
+  for (let week = 28; week <= 41; week++) {
+    for (let i = 0; i < 50; i++) { // 每周生成50条记录
+      const baseAmount = Math.random() * 10000 + 5000;
+      sampleData.push({
+        snapshot_date: `2025-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+        policy_start_year: 2025,
+        business_type_category: '普通业务',
+        chengdu_branch: '中支',
+        third_level_organization: regions[Math.floor(Math.random() * regions.length)],
+        customer_category_3: customerCategories[Math.floor(Math.random() * customerCategories.length)],
+        insurance_type: insuranceTypes[Math.floor(Math.random() * insuranceTypes.length)],
+        is_new_energy_vehicle: energyTypes[Math.floor(Math.random() * energyTypes.length)],
+        coverage_type: coverageTypes[Math.floor(Math.random() * coverageTypes.length)],
+        is_transferred_vehicle: Math.random() > 0.7 ? '过户' : '非过户',
+        renewal_status: Math.random() > 0.5 ? '续保' : '转保',
+        vehicle_insurance_grade: ['A', 'B', 'C', 'D', 'E'][Math.floor(Math.random() * 5)],
+        highway_risk_grade: '',
+        large_truck_score: Math.random() > 0.5 ? Math.floor(Math.random() * 100) : null,
+        small_truck_score: Math.random() > 0.5 ? Math.floor(Math.random() * 100) : null,
+        terminal_source: '0106移动展业(App)',
+        signed_premium_yuan: baseAmount,
+        matured_premium_yuan: baseAmount * (0.8 + Math.random() * 0.4),
+        policy_count: Math.floor(Math.random() * 3) + 1,
+        claim_case_count: Math.floor(Math.random() * 2),
+        reported_claim_payment_yuan: baseAmount * (Math.random() * 0.6),
+        expense_amount_yuan: baseAmount * (0.05 + Math.random() * 0.1),
+        commercial_premium_before_discount_yuan: baseAmount * 1.2,
+        premium_plan_yuan: baseAmount,
+        marginal_contribution_amount_yuan: baseAmount * (0.1 + Math.random() * 0.3),
+        week_number: week,
+      });
+    }
+  }
+  
+  return sampleData;
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const [rawData, setRawDataState] = useState<RawDataRow[]>([]);
   const [filteredData, setFilteredData] = useState<RawDataRow[]>([]);
@@ -47,6 +94,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [kpiData, setKpiData] = useState(defaultKpiData);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [highlightedKpis, setHighlightedKpis] = useState<string[]>([]);
+
+  // 初始化示例数据
+  useEffect(() => {
+    const initializeData = async () => {
+      try {
+        // 尝试从IndexedDB加载数据
+        const storedData = await getData('rawData');
+        if (storedData && storedData.length > 0) {
+          setRawDataState(storedData);
+        } else {
+          // 如果没有存储的数据，生成示例数据
+          const sampleData = generateSampleData();
+          setRawDataState(sampleData);
+          // 存储到IndexedDB
+          await storeData('rawData', sampleData);
+        }
+      } catch (error) {
+        console.warn('无法访问IndexedDB，使用示例数据:', error);
+        // 如果IndexedDB不可用，直接使用示例数据
+        const sampleData = generateSampleData();
+        setRawDataState(sampleData);
+      }
+    };
+
+    initializeData();
+  }, []);
 
   // Load data from IndexedDB on initial mount
   useEffect(() => {
