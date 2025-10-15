@@ -38,3 +38,10 @@ pnpm-debug.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sensitive data and bug reports
+/bug/
+bug/
+*.csv
+*.xlsx
+*.xls
