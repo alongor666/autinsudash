@@ -39,6 +39,8 @@ jobs:
         with:
           # 自动配置基础路径
           static_site_generator: next
+          # 自动启用GitHub Pages
+          enablement: true
           
       - name: Restore cache
         uses: actions/cache@v4
