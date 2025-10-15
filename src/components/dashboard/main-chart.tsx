@@ -18,11 +18,14 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function MainChart() {
-  const { chartData, filters } = useData();
+  const { chartData, filters, timePeriod } = useData();
   const filterContext = useMemo(() => formatFilterContext(filters), [filters]);
-  const mainInsight = '保费规模稳步增长，赔付水平整体可控';
-  const mainExplanation = '按周汇总当前筛选范围内的签单保费与已报告赔款表现。';
-  const mainTitle = `周度保费与赔款趋势（${filterContext}）`;
+  const isWeekly = timePeriod === 'weekly';
+  const mainInsight = isWeekly ? '聚焦最新周度的保费与赔款波动。' : '保费规模稳步增长，赔付水平整体可控';
+  const mainExplanation = isWeekly
+    ? '展示相邻周度之间的保费与赔款增量变化，用于洞察当周表现。'
+    : '展示年内累计的签单保费与已报告赔款表现。';
+  const mainTitle = `${isWeekly ? '周度增量' : '年累计'}保费与赔款趋势（${filterContext}）`;
 
   return (
     <Card>

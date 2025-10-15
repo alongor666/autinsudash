@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   // 启用静态导出模式
   output: 'export',
   
-  // 设置基础路径为GitHub Pages仓库名
-  basePath: '/autinsudash',
+  // 根据环境设置基础路径：开发环境为空，生产环境为GitHub Pages仓库名
+  basePath: process.env.NODE_ENV === 'production' ? '/autinsudash' : '',
   
   // 禁用图片优化（静态导出不支持）
   images: {

@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { RawDataRow, Kpi, KPIKey, ChartDataPoint, Filters } from './types';
+import type { RawDataRow, Kpi, KPIKey, ChartDataPoint, Filters, TimePeriod } from './types';
 import { kpiData as defaultKpiData } from './data';
 
 export function cn(...inputs: ClassValue[]) {
@@ -101,6 +101,119 @@ export function sortByPreferredOrder(values: string[], preferredOrder: readonly 
     if (indexB === -1) return -1;
     return indexA - indexB;
   });
+}
+
+const NUMERIC_FIELDS = [
+  'signed_premium_yuan',
+  'matured_premium_yuan',
+  'policy_count',
+  'claim_case_count',
+  'reported_claim_payment_yuan',
+  'expense_amount_yuan',
+  'commercial_premium_before_discount_yuan',
+  'premium_plan_yuan',
+  'marginal_contribution_amount_yuan',
+] as const;
+
+type NumericFieldKey = (typeof NUMERIC_FIELDS)[number];
+
+const DIMENSION_FIELDS = [
+  'snapshot_date',
+  'policy_start_year',
+  'business_type_category',
+  'chengdu_branch',
+  'third_level_organization',
+  'customer_category_3',
+  'insurance_type',
+  'is_new_energy_vehicle',
+  'coverage_type',
+  'is_transferred_vehicle',
+  'renewal_status',
+  'vehicle_insurance_grade',
+  'highway_risk_grade',
+  'large_truck_score',
+  'small_truck_score',
+  'terminal_source',
+  'week_number',
+] as const;
+
+type DimensionFieldKey = (typeof DIMENSION_FIELDS)[number];
+
+type AggregatedEntry = {
+  dimensions: Pick<RawDataRow, DimensionFieldKey>;
+  metrics: Record<NumericFieldKey, number>;
+};
+
+function aggregateRowsByDimensions(rows: RawDataRow[]): Map<string, AggregatedEntry> {
+  const map = new Map<string, AggregatedEntry>();
+  rows.forEach((row) => {
+    const key = DIMENSION_FIELDS.map((field) => {
+      const value = row[field];
+      if (value === null || value === undefined) {
+        return '';
+      }
+      return String(value);
+    }).join('||');
+
+    let entry = map.get(key);
+    if (!entry) {
+      const dimensions = DIMENSION_FIELDS.reduce((acc, field) => {
+        acc[field] = row[field] as RawDataRow[DimensionFieldKey];
+        return acc;
+      }, {} as Pick<RawDataRow, DimensionFieldKey>);
+      const metrics = NUMERIC_FIELDS.reduce((acc, field) => {
+        acc[field] = row[field] ?? 0;
+        return acc;
+      }, {} as Record<NumericFieldKey, number>);
+      entry = { dimensions, metrics };
+      map.set(key, entry);
+    } else {
+      NUMERIC_FIELDS.forEach((field) => {
+        entry!.metrics[field] += row[field] ?? 0;
+      });
+    }
+  });
+  return map;
+}
+
+function buildRowFromDimensions(
+  dimensions: Partial<Pick<RawDataRow, DimensionFieldKey>>,
+  metrics: Record<NumericFieldKey, number>,
+): RawDataRow {
+  return {
+    snapshot_date: (dimensions.snapshot_date as string) ?? '',
+    policy_start_year: typeof dimensions.policy_start_year === 'number' ? dimensions.policy_start_year : 0,
+    business_type_category: (dimensions.business_type_category as string) ?? '',
+    chengdu_branch: (dimensions.chengdu_branch as string) ?? '',
+    third_level_organization: (dimensions.third_level_organization as string) ?? '',
+    customer_category_3: (dimensions.customer_category_3 as string) ?? '',
+    insurance_type: (dimensions.insurance_type as string) ?? '',
+    is_new_energy_vehicle: (dimensions.is_new_energy_vehicle as string) ?? '',
+    coverage_type: (dimensions.coverage_type as string) ?? '',
+    is_transferred_vehicle: (dimensions.is_transferred_vehicle as string) ?? '',
+    renewal_status: (dimensions.renewal_status as string) ?? '',
+    vehicle_insurance_grade: (dimensions.vehicle_insurance_grade as string) ?? '',
+    highway_risk_grade: (dimensions.highway_risk_grade as string) ?? '',
+    large_truck_score:
+      typeof dimensions.large_truck_score === 'number' || dimensions.large_truck_score === null
+        ? dimensions.large_truck_score ?? null
+        : null,
+    small_truck_score:
+      typeof dimensions.small_truck_score === 'number' || dimensions.small_truck_score === null
+        ? dimensions.small_truck_score ?? null
+        : null,
+    terminal_source: (dimensions.terminal_source as string) ?? '',
+    signed_premium_yuan: metrics.signed_premium_yuan ?? 0,
+    matured_premium_yuan: metrics.matured_premium_yuan ?? 0,
+    policy_count: metrics.policy_count ?? 0,
+    claim_case_count: metrics.claim_case_count ?? 0,
+    reported_claim_payment_yuan: metrics.reported_claim_payment_yuan ?? 0,
+    expense_amount_yuan: metrics.expense_amount_yuan ?? 0,
+    commercial_premium_before_discount_yuan: metrics.commercial_premium_before_discount_yuan ?? 0,
+    premium_plan_yuan: metrics.premium_plan_yuan ?? 0,
+    marginal_contribution_amount_yuan: metrics.marginal_contribution_amount_yuan ?? 0,
+    week_number: typeof dimensions.week_number === 'number' ? dimensions.week_number : 0,
+  };
 }
 
 function calculateMetrics(data: RawDataRow[]) {
@@ -211,23 +324,95 @@ export function calculateKPIs(currentData: RawDataRow[], previousData: RawDataRo
   };
 }
 
-export function aggregateChartData(data: RawDataRow[]): ChartDataPoint[] {
-  const weeklyData: { [week: number]: { signed_premium_yuan: number; reported_claim_payment_yuan: number } } = {};
+export function computeDeltaRows(currentRows: RawDataRow[], previousRows: RawDataRow[]): RawDataRow[] {
+  if (!currentRows.length && !previousRows.length) {
+    return [];
+  }
 
-  data.forEach(row => {
-    if (!weeklyData[row.week_number]) {
-      weeklyData[row.week_number] = { signed_premium_yuan: 0, reported_claim_payment_yuan: 0 };
+  const currentMap = aggregateRowsByDimensions(currentRows);
+  const previousMap = aggregateRowsByDimensions(previousRows);
+  const keySet = new Set<string>([...currentMap.keys(), ...previousMap.keys()]);
+
+  const deltaRows: RawDataRow[] = [];
+
+  keySet.forEach((key) => {
+    const current = currentMap.get(key);
+    const previous = previousMap.get(key);
+    if (!current && !previous) {
+      return;
     }
-    weeklyData[row.week_number].signed_premium_yuan += row.signed_premium_yuan;
-    weeklyData[row.week_number].reported_claim_payment_yuan += row.reported_claim_payment_yuan;
+
+    const dimensions = {
+      ...(previous?.dimensions ?? {}),
+      ...(current?.dimensions ?? {}),
+    };
+
+    const metrics = NUMERIC_FIELDS.reduce((acc, field) => {
+      const currentValue = current?.metrics[field] ?? 0;
+      const previousValue = previous?.metrics[field] ?? 0;
+      acc[field] = currentValue - previousValue;
+      return acc;
+    }, {} as Record<NumericFieldKey, number>);
+
+    const hasMeaningfulDelta = NUMERIC_FIELDS.some((field) => metrics[field] !== 0);
+    if (!hasMeaningfulDelta) {
+      return;
+    }
+
+    deltaRows.push(buildRowFromDimensions(dimensions, metrics));
   });
 
-  return Object.entries(weeklyData)
-    .map(([week, values]) => ({
-      week_number: parseInt(week, 10),
-      ...values,
-    }))
-    .sort((a, b) => a.week_number - b.week_number);
+  return deltaRows;
+}
+
+export function aggregateChartData(data: RawDataRow[], timePeriod: TimePeriod): ChartDataPoint[] {
+  if (!data.length) {
+    return [];
+  }
+
+  const perWeek = data.reduce((acc, row) => {
+    const existing = acc.get(row.week_number) ?? { signed: 0, reported: 0 };
+    existing.signed += row.signed_premium_yuan ?? 0;
+    existing.reported += row.reported_claim_payment_yuan ?? 0;
+    acc.set(row.week_number, existing);
+    return acc;
+  }, new Map<number, { signed: number; reported: number }>());
+
+  const orderedWeeks = Array.from(perWeek.keys()).sort((a, b) => a - b);
+
+  let runningSigned = 0;
+  let runningReported = 0;
+
+  const cumulative = orderedWeeks.map((week) => {
+    const totals = perWeek.get(week) ?? { signed: 0, reported: 0 };
+    runningSigned += totals.signed;
+    runningReported += totals.reported;
+    return {
+      week_number: week,
+      signed_premium_yuan: runningSigned,
+      reported_claim_payment_yuan: runningReported,
+    };
+  });
+
+  if (timePeriod === 'weekly') {
+    return cumulative.map((entry, index) => {
+      if (index === 0) {
+        return {
+          week_number: entry.week_number,
+          signed_premium_yuan: entry.signed_premium_yuan,
+          reported_claim_payment_yuan: entry.reported_claim_payment_yuan,
+        };
+      }
+      const previous = cumulative[index - 1];
+      return {
+        week_number: entry.week_number,
+        signed_premium_yuan: entry.signed_premium_yuan - previous.signed_premium_yuan,
+        reported_claim_payment_yuan: entry.reported_claim_payment_yuan - previous.reported_claim_payment_yuan,
+      };
+    });
+  }
+
+  return cumulative;
 }
 
 export function formatFilterContext(filters: Filters) {

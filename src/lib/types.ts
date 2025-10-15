@@ -1,5 +1,7 @@
 export type KPIKey = 'signedPremium' | 'maturedLossRatio' | 'expenseRatio' | 'maturedMarginalContributionRate';
 
+export type TimePeriod = 'ytd' | 'weekly';
+
 export type Kpi = {
   id: KPIKey;
   title: string;

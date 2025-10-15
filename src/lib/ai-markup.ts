@@ -9,8 +9,6 @@
  * - {org|type|name} - 机构标签（特殊样式）
  */
 
-import { getMarginalContributionColor } from './color-scale';
-
 /**
  * 根据满期边际贡献率获取文本颜色样式类
  */

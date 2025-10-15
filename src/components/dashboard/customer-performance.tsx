@@ -27,7 +27,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getExpenseContributionColor, getMarginalContributionColor } from "@/lib/color-scale";
-import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
+import { normalizeEnergyType, normalizeTransferStatus, computeDeltaRows } from "@/lib/utils";
 import type { RawDataRow } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -607,7 +607,13 @@ type ExpenseTooltipPayload = {
 type AnalysisSection = 'structure' | 'expense' | 'all';
 
 export function CustomerPerformanceCharts({ section = 'all' }: { section?: AnalysisSection }) {
-  const { filteredData, rawData } = useData();
+  const {
+    filteredData: contextFilteredData,
+    rawData,
+    timePeriod,
+    currentWeekData,
+    previousWeekData,
+  } = useData();
   const { toast } = useToast();
   const showStructure = section === 'structure' || section === 'all';
   const showExpense = section === 'expense' || section === 'all';
@@ -622,6 +628,13 @@ export function CustomerPerformanceCharts({ section = 'all' }: { section?: Analy
   const [expenseSortOrder, setExpenseSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // AI分析缓存状态
+
+  const filteredData = useMemo(() => {
+    if (timePeriod === 'weekly') {
+      return computeDeltaRows(currentWeekData, previousWeekData);
+    }
+    return contextFilteredData;
+  }, [timePeriod, contextFilteredData, currentWeekData, previousWeekData]);
 
   const datasetForOptions = useMemo(() => (filteredData.length ? filteredData : rawData), [filteredData, rawData]);
 

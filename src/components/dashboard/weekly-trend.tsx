@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getWeekEndDate } from "@/lib/utils";
+import { getWeekEndDate, computeDeltaRows } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -335,8 +335,40 @@ function formatUnit(value: number, unit: string, formatter: (value: number) => s
   return `${content}${unit}`;
 }
 
+function buildWeeklyDeltaRows(rows: RawDataRow[]): RawDataRow[] {
+  if (!rows.length) {
+    return [];
+  }
+  const rowsByWeek = rows.reduce((acc, row) => {
+    const list = acc.get(row.week_number) ?? [];
+    list.push(row);
+    acc.set(row.week_number, list);
+    return acc;
+  }, new Map<number, RawDataRow[]>());
+
+  const orderedWeeks = Array.from(rowsByWeek.keys()).sort((a, b) => a - b);
+  const result: RawDataRow[] = [];
+
+  orderedWeeks.forEach((week, index) => {
+    const currentRows = rowsByWeek.get(week) ?? [];
+    if (!currentRows.length) {
+      return;
+    }
+    if (index === 0) {
+      result.push(...currentRows);
+      return;
+    }
+    const previousWeek = orderedWeeks[index - 1];
+    const previousRows = rowsByWeek.get(previousWeek) ?? [];
+    const deltaRows = computeDeltaRows(currentRows, previousRows);
+    result.push(...deltaRows);
+  });
+
+  return result;
+}
+
 export function WeeklyTrendChart() {
-  const { trendFilteredData, rawData } = useData();
+  const { trendFilteredData, rawData, timePeriod } = useData();
   const { toast } = useToast();
 
   const [dimension, setDimension] = useState<DimensionKey>(DEFAULT_DIMENSION);
@@ -345,9 +377,14 @@ export function WeeklyTrendChart() {
   const [lineMetricKey, setLineMetricKey] = useState<RateMetricKey>("marginalContributionRate");
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
 
+  const effectiveTrendRows = useMemo(
+    () => (timePeriod === 'weekly' ? buildWeeklyDeltaRows(trendFilteredData) : trendFilteredData),
+    [trendFilteredData, timePeriod],
+  );
+
   const datasetForOptions = useMemo(
-    () => (trendFilteredData.length ? trendFilteredData : rawData),
-    [trendFilteredData, rawData],
+    () => (effectiveTrendRows.length ? effectiveTrendRows : rawData),
+    [effectiveTrendRows, rawData],
   );
 
   const availableDimensionOptions = useMemo(
@@ -395,18 +432,18 @@ export function WeeklyTrendChart() {
   }, [dimensionValue, dimensionValueOptions]);
 
   const cleanedRows = useMemo(() => {
-    if (!trendFilteredData.length) {
+    if (!effectiveTrendRows.length) {
       return [] as RawDataRow[];
     }
     const fallback = getMissingLabel(dimension);
-    return trendFilteredData.filter((row) => {
+    return effectiveTrendRows.filter((row) => {
       if (!shouldSkipMissingDimension(dimension)) {
         return true;
       }
       const { label } = normalizeLabel(getDimensionValue(row, dimension), fallback);
       return label !== fallback;
     });
-  }, [trendFilteredData, dimension]);
+  }, [effectiveTrendRows, dimension]);
 
   const dimensionFilteredRows = useMemo(() => {
     if (dimensionValue === "ALL") {

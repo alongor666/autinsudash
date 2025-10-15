@@ -24,8 +24,9 @@ import {
   normalizeLabel,
   dimensionGroups,
 } from './customer-performance';
-import { calculateKPIs } from '@/lib/utils';
+import { computeDeltaRows } from '@/lib/utils';
 import type { RawDataRow } from '@/lib/types';
+import { calculateWeeklyKPIs, calculateYearToDateKPIs } from '@/lib/kpi-calculator';
 import { useToast } from '@/hooks/use-toast';
 import { Copy, Sparkles } from 'lucide-react';
 import {
@@ -184,14 +185,45 @@ function calculateSecondaryMetrics(currentData: RawDataRow[], previousData: RawD
 }
 
 export function KpiGrid() {
-  const { filteredData, rawData, highlightedKpis, filters } = useData();
+  const {
+    filteredData,
+    rawData,
+    highlightedKpis,
+    timePeriod,
+    currentWeekData,
+    previousWeekData,
+    prePreviousWeekData,
+    cumulativeBaselineRows,
+  } = useData();
   const { toast } = useToast();
   const [dimension, setDimension] = useState<DimensionKey>(DEFAULT_DIMENSION);
   const [dimensionValue, setDimensionValue] = useState<string>("ALL");
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [showAIAnalysis, setShowAIAnalysis] = useState<boolean>(false);
 
-  const datasetForOptions = useMemo(() => (filteredData.length ? filteredData : rawData), [filteredData, rawData]);
+  const currentBaseDataset = useMemo(() => {
+    if (timePeriod === 'weekly') {
+      return computeDeltaRows(currentWeekData, previousWeekData);
+    }
+    return filteredData;
+  }, [timePeriod, currentWeekData, previousWeekData, filteredData]);
+
+  const previousBaseDataset = useMemo(() => {
+    if (timePeriod === 'weekly') {
+      return computeDeltaRows(previousWeekData, prePreviousWeekData);
+    }
+    return cumulativeBaselineRows;
+  }, [timePeriod, previousWeekData, prePreviousWeekData, cumulativeBaselineRows]);
+
+  const datasetForOptions = useMemo(() => {
+    if (currentBaseDataset.length) {
+      return currentBaseDataset;
+    }
+    if (filteredData.length) {
+      return filteredData;
+    }
+    return rawData;
+  }, [currentBaseDataset, filteredData, rawData]);
 
   const availableDimensionOptions = useMemo(() => {
     if (!datasetForOptions.length) {
@@ -225,15 +257,15 @@ export function KpiGrid() {
   }, [availableDimensionOptions, dimension]);
 
   const cleanedRows = useMemo(() => {
-    if (!filteredData.length) {
+    if (!currentBaseDataset.length) {
       return [];
     }
     const fallback = getMissingLabel(dimension);
-    return filteredData.filter((row) => {
+    return currentBaseDataset.filter((row) => {
       const { label } = normalizeLabel(getDimensionValue(row, dimension), fallback);
       return label !== fallback;
     });
-  }, [filteredData, dimension]);
+  }, [currentBaseDataset, dimension]);
 
   const dimensionValueOptions = useMemo(() => {
     if (!cleanedRows.length) {
@@ -252,60 +284,60 @@ export function KpiGrid() {
     setDimensionValue("ALL");
   }, [dimension]);
 
-  // 获取本周和上周数据
-  const { currentWeekData, previousWeekData } = useMemo(() => {
-    if (!rawData.length) {
-      return { currentWeekData: [], previousWeekData: [] };
-    }
-
-    // 使用rawData应用当前的筛选条件（除了周数）来获取基础数据集
-    const baseFilteredData = rawData.filter((row) => {
-      const yearMatch = !filters.year || row.policy_start_year.toString() === filters.year;
-      const regionMatch = !filters.region || filters.region.includes(row.third_level_organization);
-      const typeMatch = !filters.insuranceTypes || filters.insuranceTypes.includes(row.insurance_type);
-      const customerCategoryMatch = !filters.customerCategories || filters.customerCategories.includes(row.customer_category_3);
-      const energyTypeMatch = !filters.energyTypes || filters.energyTypes.includes(row.is_new_energy_vehicle);
-      const transferredStatusMatch = !filters.transferredStatus || filters.transferredStatus.includes(row.is_transferred_vehicle);
-      const coverageTypeMatch = !filters.coverageTypes || filters.coverageTypes.includes(row.coverage_type);
-
-      return yearMatch && regionMatch && typeMatch && customerCategoryMatch && energyTypeMatch && transferredStatusMatch && coverageTypeMatch;
-    });
-
-    // 应用维度过滤
-    let dataToUse = baseFilteredData;
-    if (dimensionValue !== "ALL") {
-      const fallback = getMissingLabel(dimension);
-      dataToUse = baseFilteredData.filter((row) => {
-        const { key } = normalizeLabel(getDimensionValue(row, dimension), fallback);
-        return key === dimensionValue;
+  const filterRowsByDimension = useMemo(() => {
+    const fallback = getMissingLabel(dimension);
+    return (rows: RawDataRow[]) =>
+      rows.filter((row) => {
+        const info = normalizeLabel(getDimensionValue(row, dimension), fallback);
+        if (info.label === fallback) {
+          return false;
+        }
+        if (dimensionValue === 'ALL') {
+          return true;
+        }
+        return info.key === dimensionValue;
       });
+  }, [dimension, dimensionValue]);
+
+  const filteredCurrentRows = useMemo(
+    () => filterRowsByDimension(currentBaseDataset),
+    [filterRowsByDimension, currentBaseDataset],
+  );
+
+  const filteredPreviousRows = useMemo(
+    () => filterRowsByDimension(previousBaseDataset),
+    [filterRowsByDimension, previousBaseDataset],
+  );
+
+  const analysisCurrentRows = useMemo(() => {
+    if (timePeriod === 'weekly') {
+      return filterRowsByDimension(currentWeekData);
     }
+    return filteredCurrentRows;
+  }, [timePeriod, filterRowsByDimension, currentWeekData, filteredCurrentRows]);
 
-    const weeks = Array.from(new Set(dataToUse.map(row => row.week_number))).sort((a, b) => a - b);
-    const latestWeek = weeks[weeks.length - 1];
-    const prevWeek = latestWeek - 1;
-
-    const current = dataToUse.filter(row => row.week_number === latestWeek);
-    const previous = dataToUse.filter(row => row.week_number === prevWeek);
-
-    return { currentWeekData: current, previousWeekData: previous };
-  }, [rawData, filters, dimension, dimensionValue]);
+  const analysisPreviousRows = useMemo(() => {
+    if (timePeriod === 'weekly') {
+      return filterRowsByDimension(previousWeekData);
+    }
+    return filteredPreviousRows;
+  }, [timePeriod, filterRowsByDimension, previousWeekData, filteredPreviousRows]);
 
   const kpiData = useMemo(() => {
-    if (!currentWeekData.length) {
-      return calculateKPIs([], []);
+    if (timePeriod === 'weekly') {
+      return calculateWeeklyKPIs(filteredCurrentRows, filteredPreviousRows);
     }
-    return calculateKPIs(currentWeekData, previousWeekData);
-  }, [currentWeekData, previousWeekData]);
+    return calculateYearToDateKPIs(filteredCurrentRows, filteredPreviousRows);
+  }, [timePeriod, filteredCurrentRows, filteredPreviousRows]);
 
   // 判断是否有足够的数据进行AI分析
   const hasAIData = useMemo(() => {
-    return currentWeekData.length > 0 && previousWeekData.length > 0;
-  }, [currentWeekData, previousWeekData]);
+    return analysisCurrentRows.length > 0 && analysisPreviousRows.length > 0;
+  }, [analysisCurrentRows, analysisPreviousRows]);
 
   const secondaryMetrics = useMemo(() => {
-    return calculateSecondaryMetrics(currentWeekData, previousWeekData);
-  }, [currentWeekData, previousWeekData]);
+    return calculateSecondaryMetrics(filteredCurrentRows, filteredPreviousRows);
+  }, [filteredCurrentRows, filteredPreviousRows]);
 
   const tableRows = useMemo(() => {
     const sections = [
@@ -361,12 +393,12 @@ export function KpiGrid() {
   }, [kpiData, secondaryMetrics]);
 
   const kpiInsight = useMemo(() => {
-    if (!currentWeekData.length) {
+    if (!filteredCurrentRows.length) {
       return "当前无数据可分析";
     }
 
     // 计算本周指标
-    const calcMetrics = (data: typeof currentWeekData) => {
+    const calcMetrics = (data: RawDataRow[]) => {
       const totalSigned = data.reduce((acc, row) => acc + (row.signed_premium_yuan || 0), 0);
       const totalMatured = data.reduce((acc, row) => acc + (row.matured_premium_yuan || 0), 0);
       const totalClaim = data.reduce((acc, row) => acc + (row.reported_claim_payment_yuan || 0), 0);
@@ -380,8 +412,8 @@ export function KpiGrid() {
       };
     };
 
-    const current = calcMetrics(currentWeekData);
-    const previous = previousWeekData.length > 0 ? calcMetrics(previousWeekData) : null;
+    const current = calcMetrics(filteredCurrentRows);
+    const previous = filteredPreviousRows.length > 0 ? calcMetrics(filteredPreviousRows) : null;
 
     if (!previous) {
       return "本周数据正常运行中";
@@ -425,7 +457,7 @@ export function KpiGrid() {
     }
 
     return "经营指标保持稳定";
-  }, [currentWeekData, previousWeekData]);
+  }, [filteredCurrentRows, filteredPreviousRows]);
 
   const isTableMode = viewMode === 'table';
   const canCopyTable = tableRows.length > 0;
@@ -659,8 +691,8 @@ export function KpiGrid() {
 
       {showAIAnalysis && hasAIData && (
         <AIDeteriorationAnalysis
-          currentWeekData={currentWeekData}
-          previousWeekData={previousWeekData}
+          currentWeekData={analysisCurrentRows}
+          previousWeekData={analysisPreviousRows}
         />
       )}
     </div>

@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getMarginalContributionColor } from "@/lib/color-scale";
-import { normalizeEnergyType, normalizeTransferStatus } from "@/lib/utils";
+import { normalizeEnergyType, normalizeTransferStatus, computeDeltaRows } from "@/lib/utils";
 import type { RawDataRow } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -415,7 +415,13 @@ const metricOptions = metricDefinitions.map((metric) => ({
 }));
 
 export function ComparisonAnalysisChart() {
-  const { filteredData, rawData } = useData();
+  const {
+    filteredData: contextFilteredData,
+    rawData,
+    timePeriod,
+    currentWeekData,
+    previousWeekData,
+  } = useData();
   const { toast } = useToast();
   const [dimension, setDimension] = useState<DimensionKey>("customer_category_3");
   const [metricKey, setMetricKey] = useState<MetricKey>("signedPremium");
@@ -423,6 +429,13 @@ export function ComparisonAnalysisChart() {
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
 
   const metric = metricDefinitions.find((item) => item.key === metricKey) ?? metricDefinitions[0];
+
+  const filteredData = useMemo(() => {
+    if (timePeriod === 'weekly') {
+      return computeDeltaRows(currentWeekData, previousWeekData);
+    }
+    return contextFilteredData;
+  }, [timePeriod, contextFilteredData, currentWeekData, previousWeekData]);
 
   const datasetForOptions = useMemo(() => (filteredData.length ? filteredData : rawData), [filteredData, rawData]);
 
@@ -796,15 +809,3 @@ export function ComparisonAnalysisChart() {
     </Card>
   );
 }
-
-/**
- * 处理AI分析按钮点击事件
- * 注意：静态部署模式下，AI分析功能已禁用
- */
-const handleAnalyzeChart = async () => {
-  toast({
-    variant: 'default',
-    title: 'AI 分析功能暂不可用',
-    description: '当前为静态部署模式，AI分析功能已禁用。',
-  });
-};
