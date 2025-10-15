@@ -77,7 +77,8 @@ function generateSampleData(): RawDataRow[] {
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [rawData, setRawDataState] = useState<RawDataRow[]>([]);
+  // 直接使用示例数据初始化，确保在静态导出环境中也能正常工作
+  const [rawData, setRawDataState] = useState<RawDataRow[]>(() => generateSampleData());
   const [filteredData, setFilteredData] = useState<RawDataRow[]>([]);
   const [trendFilteredData, setTrendFilteredData] = useState<RawDataRow[]>([]);
   const [filters, setFilters] = useState<Filters>({
@@ -95,30 +96,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
   const [highlightedKpis, setHighlightedKpis] = useState<string[]>([]);
 
-  // 初始化示例数据
+  // 在客户端环境中尝试加载和存储数据
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        // 尝试从IndexedDB加载数据
-        const storedData = await getData('rawData');
-        if (storedData && storedData.length > 0) {
-          setRawDataState(storedData);
-        } else {
-          // 如果没有存储的数据，生成示例数据
-          const sampleData = generateSampleData();
-          setRawDataState(sampleData);
-          // 存储到IndexedDB
-          await storeData('rawData', sampleData);
+    if (typeof window !== 'undefined') {
+      const initializeData = async () => {
+        try {
+          // 尝试从IndexedDB加载数据
+          const storedData = await getData();
+          if (storedData && storedData.length > 0) {
+            setRawDataState(storedData);
+          } else {
+            // 如果没有存储的数据，存储当前的示例数据
+            const sampleData = generateSampleData();
+            await storeData(sampleData);
+          }
+        } catch (error) {
+          console.warn('无法访问IndexedDB，使用示例数据:', error);
+          // IndexedDB不可用时，保持使用示例数据
         }
-      } catch (error) {
-        console.warn('无法访问IndexedDB，使用示例数据:', error);
-        // 如果IndexedDB不可用，直接使用示例数据
-        const sampleData = generateSampleData();
-        setRawDataState(sampleData);
-      }
-    };
+      };
 
-    initializeData();
+      initializeData();
+    }
   }, []);
 
   // Load data from IndexedDB on initial mount
